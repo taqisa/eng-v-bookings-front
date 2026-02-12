@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>hajzk</title>
+    <meta name="description" content="احجز موعدك مع أفضل مقدمي الخدمات في فلسطين" />
+    <meta name="author" content="Booking Palestine Connect" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="apple-touch-icon" href="/logo.svg" />
+
+    <!-- Google Fonts for Arabic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <meta property="og:title" content="hajzk" />
+    <meta property="og:description" content="احجز موعدك مع أفضل مقدمي الخدمات في فلسطين" />
+    <meta property="og:type" content="website" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <style>
+      /* الوضع الداكن */
+      html.dark {
+        background-color: #1e1f22; /* مثل ديسكورد */
+        color: #ffffff;
+        font-family: 'Cairo', 'Tajawal', sans-serif;
+      }
+
+      html.dark a {
+        color: #7289da; /* أزرق مثل ديسكورد */
+      }
+
+      html.dark body {
+        margin: 0;
+        padding: 0;
+        background-color: #1e1f22;
+      }
+
+      /* كروت أو عناصر */
+      html.dark .card {
+        background-color: #2b2d31;
+        color: #fff;
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      /* Global responsive locking */
+      html, body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      #root {
+        width: 100%;
+        max-width: 100%;
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 0;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root" class="w-full min-h-screen"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

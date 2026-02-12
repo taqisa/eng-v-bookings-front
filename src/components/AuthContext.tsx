@@ -1,0 +1,200 @@
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
+
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  signUp: (name: string, email: string, phone: string, password: string) => Promise<{ error: any }>;
+  signIn: (phone: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+// دالة مساعدة لإعادة المحاولة مع تأخير تصاعدي
+const retryWithBackoff = async (fn: () => Promise<any>, maxAttempts: number = 3) => {
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error.status === 429) {
+        attempt++;
+        if (attempt === maxAttempts) throw error;
+        const delay = Math.pow(2, attempt) * 1000; // تأخير تصاعدي (1s, 2s, 4s)
+        console.log(`🔴 [RETRY] Rate limit hit, retrying after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error('Max retry attempts reached');
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const sessionCache = useRef<Session | null>(null); // لتخزين الجلسة مؤقتًا
+
+  useEffect(() => {
+    // تحميل الجلسة الأولية
+    const loadInitialSession = async () => {
+      if (sessionCache.current) {
+        console.log('🔴 [AUTH] Using cached session:', sessionCache.current);
+        setSession(sessionCache.current);
+        setUser(sessionCache.current?.user ?? null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data: { session } } = await retryWithBackoff(() =>
+          supabase.auth.getSession()
+        );
+        console.log('🔴 [AUTH] Initial session:', session);
+        sessionCache.current = session;
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('🔴 [AUTH] Error loading initial session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialSession();
+
+    // إعداد مستمع حالة التوثيق
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔴 [AUTH] Auth state changed:', event, session);
+        sessionCache.current = session;
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signUp = async (name: string, email: string, phone: string, password: string) => {
+    try {
+      console.log('🔴 [AUTH] Attempting signup with:', { name, email, phone });
+
+      const { data, error } = await retryWithBackoff(() =>
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              phone,
+              display_name: name,
+              name
+            }
+          }
+        })
+      );
+
+      if (error) {
+        console.error('🔴 [AUTH] Signup error:', error);
+        return { error };
+      }
+
+      console.log('🔴 [AUTH] Signup successful:', data);
+
+      if (data.user) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([
+            {
+              id: data.user.id,
+              email,
+              name,
+              phone
+            }
+          ]);
+
+        if (insertError) {
+          console.error('🔴 [AUTH] Insert user error:', insertError);
+        }
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('🔴 [AUTH] Signup exception:', err);
+      return { error: err };
+    }
+  };
+
+  const signIn = async (emailOrPhone: string, password: string) => {
+    try {
+      console.log('🔴 [AUTH] Attempting signin with:', emailOrPhone);
+
+      let email = emailOrPhone;
+
+      if (!emailOrPhone.includes('@')) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('phone', emailOrPhone)
+          .single();
+
+        if (userError || !userData) {
+          console.error('🔴 [AUTH] User not found by phone:', userError);
+          return { error: { message: 'رقم الهاتف غير مسجل' } };
+        }
+
+        email = userData.email;
+      }
+
+      const { error } = await retryWithBackoff(() =>
+        supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+      );
+
+      if (error) {
+        console.error('🔴 [AUTH] Signin error:', error);
+      }
+
+      return { error };
+    } catch (err) {
+      console.error('🔴 [AUTH] Signin exception:', err);
+      return { error: err };
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    sessionCache.current = null; // إعادة تعيين التخزين المؤقت
+  };
+
+  const value = useMemo(() => ({
+    user,
+    session,
+    signUp,
+    signIn,
+    signOut,
+    loading
+  }), [user, session, loading]);
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};

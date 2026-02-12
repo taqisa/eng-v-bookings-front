@@ -1,0 +1,43 @@
+@keyframes-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(253, 224, 71, 0.5), 0 0 10px rgba(253, 224, 71, 0.4), 0 0 15px rgba(253, 224, 71, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(253, 224, 71, 0.8), 0 0 30px rgba(253, 224, 71, 0.6), 0 0 40px rgba(253, 224, 71, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(253, 224, 71, 0.5), 0 0 10px rgba(253, 224, 71, 0.4), 0 0 15px rgba(253, 224, 71, 0.3);
+  }
+}
+
+.glow-card {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    transparent,
+    rgba(253, 224, 71, 0.3),
+    transparent 30%
+  );
+  animation: rotate 4s linear infinite;
+  z-index: -1;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(1turn);
+  }
+}
+
+.glow-card.featured-card {
+  animation: glow 3s infinite;
+}
