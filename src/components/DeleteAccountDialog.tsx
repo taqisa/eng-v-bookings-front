@@ -24,7 +24,7 @@ const DeleteAccountDialog = () => {
 
   const handleDeleteAccount = async () => {
     if (!user || confirmText !== "DELETE") {
-      toast.error("يرجى كتابة DELETE للتأكيد");
+      toast.error("Please type DELETE to confirm");
       return;
     }
 
@@ -39,7 +39,7 @@ const DeleteAccountDialog = () => {
 
       if (bookingsError) {
         console.error('Error deleting bookings:', bookingsError);
-        toast.error('حدث خطأ في حذف الحجوزات');
+        toast.error('Error deleting bookings');
         return;
       }
 
@@ -51,19 +51,18 @@ const DeleteAccountDialog = () => {
 
       if (userError) {
         console.error('Error deleting user:', userError);
-        toast.error('حدث خطأ في حذف الحساب');
+        toast.error('Error deleting account');
         return;
       }
 
-      // Sign out from Supabase Auth
       await supabase.auth.signOut();
 
-      toast.success('تم حذف حسابك بنجاح');
+      toast.success('Account deleted successfully');
       navigate('/');
 
     } catch (error) {
       console.error('Error deleting account:', error);
-      toast.error('حدث خطأ في حذف الحساب');
+      toast.error('Error deleting account');
     } finally {
       setIsDeleting(false);
     }
@@ -76,37 +75,37 @@ const DeleteAccountDialog = () => {
           variant="destructive" 
           className="bg-red-500 hover:bg-red-600 text-white"
         >
-          <Trash2 className="w-4 h-4 ml-2" />
-          حذف الحساب نهائياً
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete Account Permanently
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center text-red-600">
-            <AlertTriangle className="w-5 h-5 ml-2" />
-            تأكيد حذف الحساب
+            <AlertTriangle className="w-5 h-5 mr-2" />
+            Confirm Account Deletion
           </DialogTitle>
-          <DialogDescription className="text-right">
-            هذا الإجراء لا يمكن التراجع عنه. سيتم حذف جميع بياناتك وحجوزاتك نهائياً.
+          <DialogDescription className="text-left">
+            This action cannot be undone. All your data and bookings will be permanently deleted.
           </DialogDescription>
         </DialogHeader>
 
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
-            سيتم حذف جميع البيانات التالية:
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>معلومات الحساب الشخصية</li>
-              <li>جميع الحجوزات السابقة والمستقبلية</li>
-              <li>تاريخ الاستخدام</li>
+          <AlertDescription className="text-red-800 text-left">
+            The following data will be deleted:
+            <ul className="list-disc list-inside mt-2 space-y-1 text-left">
+              <li>Personal account information</li>
+              <li>All past and future bookings</li>
+              <li>Usage history</li>
             </ul>
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4">
-          <div>
+          <div className="text-left">
             <label className="text-sm font-medium text-gray-700">
-              اكتب "DELETE" للتأكيد:
+              Type "DELETE" to confirm:
             </label>
             <input
               type="text"
@@ -118,9 +117,9 @@ const DeleteAccountDialog = () => {
           </div>
         </div>
 
-        <DialogFooter className="flex space-x-2 rtl:space-x-reverse">
+        <DialogFooter className="flex space-x-2">
           <DialogTrigger asChild>
-            <Button variant="outline">إلغاء</Button>
+            <Button variant="outline">Cancel</Button>
           </DialogTrigger>
           <Button
             variant="destructive"
@@ -128,7 +127,7 @@ const DeleteAccountDialog = () => {
             disabled={isDeleting || confirmText !== "DELETE"}
             className="bg-red-500 hover:bg-red-600"
           >
-            {isDeleting ? 'جارٍ الحذف...' : 'حذف الحساب نهائياً'}
+            {isDeleting ? 'Deleting...' : 'Delete Account Permanently'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { format, addDays, startOfWeek, parseISO, parse, addMinutes } from "date-fns";
-import { ar } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
@@ -29,7 +28,7 @@ interface EnhancedModernCalendarProps {
   onFoundSlotConfirmed: () => void;
 }
 
-const language = "ar";
+const language = "en";
 const timezone = "Asia/Jerusalem";
 
 export default function EnhancedModernCalendar({
@@ -147,13 +146,13 @@ export default function EnhancedModernCalendar({
         .single();
       if (error) {
         console.error("🔧 [CALENDAR] Error fetching provider schedule:", error);
-        toast.error("فشل في جلب جدول المزود");
+        toast.error("Failed to fetch provider schedule");
         return;
       }
       setProvider(data);
     } catch (error) {
       console.error("🔧 [CALENDAR] Exception fetching provider:", error);
-      toast.error("حدث خطأ أثناء جلب بيانات المزود");
+      toast.error("Error fetching provider data");
     }
   };
 
@@ -173,7 +172,7 @@ export default function EnhancedModernCalendar({
       const response = await fetch(`${API_BASE_URL}/providers/${providerId}/available-slots?date=${date}&serviceId=${serviceId}&duration=${duration}`);
       if (!response.ok) {
         console.error("🔧 [CALENDAR] Backend fetch error:", await response.json());
-        toast.error("فشل في جلب الأوقات المتاحة من الخادم");
+        toast.error("Failed to fetch available slots from server");
         setAvailableSlots([]);
         return;
       }
@@ -185,7 +184,7 @@ export default function EnhancedModernCalendar({
       }
     } catch (error) {
       console.error("🔧 [CALENDAR] Error fetching available slots:", error);
-      toast.error("حدث خطأ أثناء جلب الأوقات المتاحة");
+      toast.error("Error fetching available slots");
       setAvailableSlots([]);
     } finally {
       setIsLoadingSlots(false);
@@ -207,13 +206,13 @@ export default function EnhancedModernCalendar({
 
   const handleDateSelect = (date: Date) => {
     if (!serviceId) {
-      toast.warning(`الرجاء اختيار ${clientLabel} أولاً لتحديد التاريخ.`);
+      toast.warning(`Please select a ${clientLabel} first to choose a date.`);
       return;
     }
     const isAvailable = isDateAvailable(date);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     if (!isAvailable || isPast) {
-      toast.error("هذا التاريخ غير متاح للحجز");
+      toast.error("This date is not available for booking");
       return;
     }
     const dateString = format(date, "yyyy-MM-dd");
@@ -228,7 +227,7 @@ export default function EnhancedModernCalendar({
   const handleServiceSelect = (selectedServiceId: string) => {
     const service = services.find(s => s.id === selectedServiceId);
     if (service) {
-      console.log("🔧 [CALENDAR] Service selected:", service.name_ar, "Duration:", service.duration_minutes);
+      console.log("🔧 [CALENDAR] Service selected:", service.name, "Duration:", service.duration_minutes);
       onServiceSelect(selectedServiceId, service.duration_minutes);
     } else {
       console.warn("🔧 [CALENDAR] Service not found, using fallback duration");
@@ -254,7 +253,7 @@ export default function EnhancedModernCalendar({
       });
 
       if (!response.ok) {
-        toast.error('لم يتم العثور على مواعيد متاحة.');
+        toast.error('No available slots found.');
         setNextAvailableSearch(null);
         return;
       }
@@ -271,14 +270,14 @@ export default function EnhancedModernCalendar({
         setNextAvailableSearch(data.available_slot);
         setSearchFromDate(end_iso);
 
-        toast.success(`تم العثور على موعد: ${formatFoundSlotDate(start_iso)}`);
+        toast.success(`Found slot: ${formatFoundSlotDate(start_iso)}`);
       } else {
-        toast.info('لا توجد مواعيد أخرى متاحة.');
+        toast.info('No other slots available.');
         setNextAvailableSearch(null);
       }
     } catch (error) {
       console.error("Error fetching next available slot:", error);
-      toast.error('حدث خطأ أثناء البحث عن موعد.');
+      toast.error('Error searching for an appointment.');
     } finally {
       setIsSearchingNextAvailable(false);
     }
@@ -318,21 +317,21 @@ export default function EnhancedModernCalendar({
     dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
     if (format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")) {
-      return "اليوم";
+      return "Today";
     }
     if (format(date, "yyyy-MM-dd") === format(addDays(new Date(), 1), "yyyy-MM-dd")) {
-      return "غداً";
+      return "Tomorrow";
     }
     if (format(date, "yyyy-MM-dd") === format(addDays(new Date(), 2), "yyyy-MM-dd")) {
-      return "بعد غد";
+      return "Day after tomorrow";
     }
-    return format(date, "EEEE", { locale: ar });
+    return format(date, "EEEE");
   };
 
   const formatFoundSlotDate = (isoString: string) => {
     const date = parseISO(isoString);
     const dayName = getRelativeDayName(date);
-    const formattedDateTime = format(date, 'd/M/yyyy, h:mm a', { locale: ar });
+    const formattedDateTime = format(date, 'M/d/yyyy, h:mm a');
     return `${dayName}, ${formattedDateTime}`;
   };
 
@@ -354,7 +353,7 @@ export default function EnhancedModernCalendar({
         <h3 className="text-lg font-semibold text-gray-900 mb-6 text-center">{clientLabel}</h3>
         {services.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            لا توجد خدمات متاحة لهذا المزود
+            No services available for this provider
           </div>
         ) : (
           <div className="relative">
@@ -375,11 +374,11 @@ export default function EnhancedModernCalendar({
                       : 'border-2 border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
                       } ${isAvailable ? 'opacity-100' : 'opacity-50'} ${boxHeight}`}
                     style={visibleServices.length === 5 ? { gridArea: index === 4 ? 'center' : index < 2 ? `top${index + 1}` : undefined } : {}}
-                    aria-label={`اختر ${language === 'ar' ? service.name_ar : service.name}`}
+                    aria-label={`اختر ${language === 'ar' ? service.name : service.name}`}
                   >
                     <div className="flex flex-col items-center relative">
                       <span className={`font-semibold text-center ${textSize} font-arabic text-gray-900`}>
-                        {language === 'ar' ? service.name_ar : service.name}
+                        {language === 'ar' ? service.name : service.name}
                       </span>
                       {index < visibleServices.length - 1 && visibleServices.length !== 5 && (
                         <div className="w-3/4 h-px bg-[#D4AF37] mt-2 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
@@ -404,7 +403,7 @@ export default function EnhancedModernCalendar({
               <button
                 onClick={toggleExpanded}
                 className="w-12 h-12 mx-auto mt-4 flex items-center justify-center bg-white border-2 border-[#D4AF37] text-[#D4AF37] rounded-full hover:bg-[#D4AF37]/10 hover:shadow-[0_0_8px_rgba(212,175,55,0.3)] transition-all duration-300 ease-in-out"
-                aria-label="عرض المزيد"
+                aria-label="Show more"
               >
                 <ChevronDown className="w-6 h-6" />
               </button>
@@ -413,7 +412,7 @@ export default function EnhancedModernCalendar({
               <button
                 onClick={toggleExpanded}
                 className="w-12 h-12 mx-auto mt-4 flex items-center justify-center bg-white border-2 border-[#D4AF37] text-[#D4AF37] rounded-full hover:bg-[#D4AF37]/10 hover:shadow-[0_0_8px_rgba(212,175,55,0.3)] transition-all duration-300 ease-in-out"
-                aria-label="إخفاء"
+                aria-label="Hide"
               >
                 <ChevronUp className="w-6 h-6" />
               </button>
@@ -427,7 +426,7 @@ export default function EnhancedModernCalendar({
                   disabled={currentPage === 1}
                   className="border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:shadow-[0_0_8px_rgba(212,175,55,0.3)]"
                 >
-                  السابق
+                  Previous
                 </Button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <Button
@@ -447,7 +446,7 @@ export default function EnhancedModernCalendar({
                   disabled={currentPage === totalPages}
                   className="border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:shadow-[0_0_8px_rgba(212,175,55,0.3)]"
                 >
-                  التالي
+                  Next
                 </Button>
               </div>
             )}
@@ -458,7 +457,7 @@ export default function EnhancedModernCalendar({
       {serviceId && (
         <Card className="p-6 bg-white rounded-xl">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-            البحث السريع عن موعد
+            Quick appointment search
           </h3>
           <div className="flex flex-col items-center space-y-4">
             <Button
@@ -466,21 +465,21 @@ export default function EnhancedModernCalendar({
               disabled={isSearchingNextAvailable || !!foundSlot}
               className="w-full"
             >
-              {isSearchingNextAvailable ? '...جاري البحث' : 'ابحث عن أقرب موعد'}
+              {isSearchingNextAvailable ? 'Searching...' : 'Find the nearest appointment available'}
             </Button>
 
             {foundSlot && (
               <div className="text-center p-4 bg-amber-50 border border-amber-200 rounded-lg w-full">
                 <p className="text-amber-800 font-semibold">
-                  أقرب موعد متاح: {formatFoundSlotDate(foundSlot.start_iso)}
+                  Next available slot: {formatFoundSlotDate(foundSlot.start_iso)}
                 </p>
-                <div className="flex space-x-2 rtl:space-x-reverse mt-3 justify-center">
+                <div className="flex space-x-2 mt-3 justify-center">
                   <Button
                     onClick={handleConfirmFoundSlot}
                     size="sm"
                     className="bg-[#D4AF37] hover:bg-[#c8a432]"
                   >
-                    تأكيد هذا الموعد
+                    Confirm this slot
                   </Button>
                   <Button
                     onClick={() => handleFindNextAvailable(false)}
@@ -488,7 +487,7 @@ export default function EnhancedModernCalendar({
                     variant="outline"
                     size="sm"
                   >
-                    {isSearchingNextAvailable ? '...جاري البحث' : 'البحث عن التالي'}
+                    {isSearchingNextAvailable ? 'Searching...' : 'Search for next'}
                   </Button>
                 </div>
               </div>
@@ -498,7 +497,7 @@ export default function EnhancedModernCalendar({
       )}
 
       <Card className="p-6 bg-white rounded-xl">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">أو يمكنك اختيار تاريخ محدد</h3>
+        <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Or select a specific date</h3>
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigateWeek("prev")}
@@ -509,7 +508,7 @@ export default function EnhancedModernCalendar({
             <ChevronRight className="w-5 h-5 text-gray-600" />
           </button>
           <h3 className="text-lg font-semibold text-gray-900">
-            {format(weekStart, "M / yyyy", { locale: ar })}
+            {format(weekStart, "M / yyyy")}
           </h3>
           <button
             onClick={() => navigateWeek("next")}
@@ -570,23 +569,23 @@ export default function EnhancedModernCalendar({
       {selectedDate && (
         <Card className={`p-6 bg-white border-0 shadow-sm rounded-xl ${!isTimeSelectionEnabled ? "opacity-70" : ""}`}>
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Clock className="w-5 h-5 ml-2 text-[#D4AF37]" />
-            الأوقات المتاحة
+            <Clock className="w-5 h-5 mr-2 text-[#D4AF37]" />
+            Available Slots
           </h3>
           {!serviceId ? (
             <div className="text-center py-8">
               <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">{`الرجاء اختيار ${clientLabel} أولاً`}</p>
+              <p className="text-gray-500">{`Please select a ${clientLabel} first`}</p>
             </div>
           ) : !selectedDate ? (
             <div className="text-center py-8">
               <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">الرجاء اختيار التاريخ أولاً</p>
+              <p className="text-gray-500">Please select a date first</p>
             </div>
           ) : isLoadingSlots ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#D4AF37] mx-auto"></div>
-              <p className="text-gray-500 mt-2">جاري تحميل الأوقات...</p>
+              <p className="text-gray-500 mt-2">Loading slots...</p>
             </div>
           ) : availableSlots.length > 0 ? (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -611,8 +610,8 @@ export default function EnhancedModernCalendar({
               <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">
                 {memoizedProvider?.working_days?.includes(format(parseISO(selectedDate), "EEEE").toLowerCase())
-                  ? "لا توجد مواعيد متاحة في هذا التاريخ"
-                  : "مقدم الخدمة لا يعمل في هذا اليوم"}
+                  ? "No appointments available on this date"
+                  : "The service provider does not work on this day"}
               </p>
             </div>
           )}

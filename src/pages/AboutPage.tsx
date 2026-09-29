@@ -14,10 +14,10 @@ const AboutPage = () => {
                 {/* Header */}
                 <div className="text-center mb-20 animate-fade-in">
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 pb-2">
-                        عن منصة <span className="text-primary">HAJZK</span>
+                        About <span className="text-primary">us</span>
                     </h1>
                     <p className="text-xl text-gray-300 leading-relaxed max-w-2xl mx-auto">
-                        منصة HAJZK هي وجهتك الأولى والموثوقة لحجز المواعيد مع أفضل مقدمي الخدمات في فلسطين.
+                        your premier and trusted destination for booking appointments with the best service providers.
                     </p>
                 </div>
 
@@ -29,9 +29,9 @@ const AboutPage = () => {
                             <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
                                 <Globe className="w-7 h-7 text-primary stroke-[2.5]" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-4 text-gray-900 group-hover:text-primary transition-colors">رؤيتنا</h3>
+                            <h3 className="text-2xl font-bold mb-4 text-gray-900 group-hover:text-primary transition-colors">Our Vision</h3>
                             <p className="text-gray-700 leading-relaxed text-lg font-medium">
-                                نسعى لرقمنة قطاع الخدمات في فلسطين وتسهيل حياة المواطنين من خلال توفير منصة موحدة وشاملة لحجز المواعيد في مختلف القطاعات، جاعلين التكنولوجيا في خدمة الإنسان.
+                                We aim to digitize the services sector and make life easier by providing a unified, comprehensive platform for booking appointments across multiple industries — putting technology in service of people.
                             </p>
                         </div>
                     </div>
@@ -42,9 +42,9 @@ const AboutPage = () => {
                             <div className="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
                                 <Users className="w-7 h-7 text-blue-600 stroke-[2.5]" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-4 text-gray-900 group-hover:text-blue-600 transition-colors">رسالتنا</h3>
+                            <h3 className="text-2xl font-bold mb-4 text-gray-900 group-hover:text-blue-600 transition-colors">Our Mission</h3>
                             <p className="text-gray-700 leading-relaxed text-lg font-medium">
-                                بناء جسور الثقة بين مقدمي الخدمات والمواطنين، وتقديم تجربة حجز سلسة، سريعة، وموثوقة توفر الوقت والجهد للجميع، مع الحفاظ على أعلى معايير الجودة.
+                                Building trust between service providers and clients, delivering a smooth, fast, and reliable booking experience that saves time and effort for everyone, while maintaining the highest quality standards.
                             </p>
                         </div>
                     </div>
@@ -53,8 +53,8 @@ const AboutPage = () => {
                 {/* How it Works - Simple 3 Steps */}
                 <div id="how-it-works" className="mb-20 scroll-mt-24">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-white mb-4">كيف تعمل المنصة؟</h2>
-                        <p className="text-gray-400">احجز موعدك في 3 خطوات بسيطة</p>
+                        <h2 className="text-3xl font-bold text-white mb-4">How does it work?</h2>
+                        <p className="text-gray-400">Book your appointment in 3 simple steps</p>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8 relative">
@@ -66,8 +66,8 @@ const AboutPage = () => {
                                 <span className="absolute top-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center font-bold text-black border-4 border-gray-900">1</span>
                                 <Globe className="w-10 h-10 text-primary" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">اختر المدينة والخدمة</h3>
-                            <p className="text-gray-400 text-sm">حدد مدينتك ونوع الخدمة التي تبحث عنها</p>
+                            <h3 className="text-xl font-bold text-white mb-2">Choose your service</h3>
+                            <p className="text-gray-400 text-sm">Pick the type of service you are looking for</p>
                         </div>
 
                         <div className="relative z-10 text-center">
@@ -75,8 +75,8 @@ const AboutPage = () => {
                                 <span className="absolute top-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center font-bold text-black border-4 border-gray-900">2</span>
                                 <Users className="w-10 h-10 text-primary" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">اختر مقدم الخدمة</h3>
-                            <p className="text-gray-400 text-sm">تصفح قائمة المهنيين واختر الأنسب لك</p>
+                            <h3 className="text-xl font-bold text-white mb-2">Select a date </h3>
+                            <p className="text-gray-400 text-sm">Choose the desired date and time  or search for the nearest available slot</p>
                         </div>
 
                         <div className="relative z-10 text-center">
@@ -84,8 +84,8 @@ const AboutPage = () => {
                                 <span className="absolute top-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center font-bold text-black border-4 border-gray-900">3</span>
                                 <CheckCircle2 className="w-10 h-10 text-primary" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">اكد موعدك</h3>
-                            <p className="text-gray-400 text-sm">اختر الوقت المناسب واكد الحجز فوراً</p>
+                            <h3 className="text-xl font-bold text-white mb-2">Confirm your appointment</h3>
+                            <p className="text-gray-400 text-sm">After picking your preferred time you will get a confirmation message</p>
                         </div>
                     </div>
                 </div>
@@ -97,29 +97,29 @@ const AboutPage = () => {
                         <div className="p-3 bg-red-100/80 rounded-xl shadow-sm">
                             <Lock className="w-8 h-8 text-red-600" />
                         </div>
-                        <h2 className="text-3xl font-bold text-gray-900">السياسات والخصوصية</h2>
+                        <h2 className="text-3xl font-bold text-gray-900">Policies & Privacy</h2>
                     </div>
 
                     <div className="space-y-8 text-gray-700 leading-relaxed font-medium">
                         <div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">التزامنا بالخصوصية</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Our Privacy Commitment</h3>
                             <p>
-                                في منصة HAJZK، نأخذ خصوصية بياناتك على محمل الجد. جميع المعلومات الشخصية ومعلومات الحجز يتم تشفيرها وحمايتها وفقاً لأعلى المعايير الأمنية. لا نشارك بياناتك مع أي طرف ثالث غير مقدم الخدمة الذي قمت بالحجز لديه.
+                                We take your privacy seriously. All personal information and booking data is encrypted and protected to the highest security standards. We do not share your data with any third party other than the service provider you booked with.
                             </p>
                         </div>
 
                         <div className="h-px bg-gray-200"></div>
 
                         <div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">جدية الحجوزات والمسؤولية القانونية</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Booking Seriousness & Legal Responsibility</h3>
                             <p className="mb-4">
-                                المنصة مخصصة للحجوزات الحقيقية والجدية فقط. عند إتمام عملية الحجز، فإنك تدخل في اتفاق مبدئي مع مقدم الخدمة.
+                                The platform is for genuine and serious bookings only. By completing a booking, you enter into a preliminary agreement with the service provider.
                             </p>
                             <ul className="space-y-2 list-disc list-inside marker:text-red-500">
-                                <li>يجب استخدام رقم هاتف حقيقي وفعال عند الحجز.</li>
-                                <li>في حال التغيب عن الموعد دون إلغاء مسبق، يحق للمنصة ومقدم الخدمة اتخاذ الإجراءات اللازمة.</li>
-                                <li>الحجوزات الوهمية تعرض صاحبها للمسائلة القانونية وحظر الحساب نهائياً.</li>
-                                <li>نحتفظ بسجل لجميع عمليات الحجز لضمان حقوق جميع الأطراف.</li>
+                                <li>You must use a real and active phone number when booking.</li>
+                                <li>Failure to attend without prior cancellation may result in action by the platform and the provider.</li>
+                                <li>Fake bookings may result in legal liability and permanent account suspension.</li>
+                                <li>We maintain records of all bookings to protect the rights of all parties.</li>
                             </ul>
                         </div>
                     </div>
@@ -131,7 +131,7 @@ const AboutPage = () => {
                         to="/"
                         className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold py-4 px-10 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-primary/25 text-lg"
                     >
-                        ابحث عن خدمة الآن
+                        Find a service now
                         <ArrowRight className="w-6 h-6 rtl:rotate-180" />
                     </Link>
                 </div>

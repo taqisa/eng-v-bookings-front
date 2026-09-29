@@ -138,6 +138,42 @@ export type Database = {
           },
         ]
       }
+      organizations: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          status: string | null
+          subscription_status: string | null
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          status?: string | null
+          subscription_status?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          status?: string | null
+          subscription_status?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       providers: {
         Row: {
           active_google_account_id: string | null
@@ -146,6 +182,7 @@ export type Database = {
           city_id: string
           created_at: string
           display_name: string | null
+          email: string | null
           experience: string | null
           google_access_token: string | null
           google_calendar_connected: boolean | null
@@ -157,11 +194,13 @@ export type Database = {
           location: string | null
           name: string
           name_ar: string
+          organization_id: string | null
           phone: string | null
           phone_code: string | null
           rating: number | null
           review_count: number | null
           slot_duration: number | null
+          slug: string | null
           specialty: string
           specialty_ar: string
           token_expires_at: string | null
@@ -177,6 +216,7 @@ export type Database = {
           city_id: string
           created_at?: string
           display_name?: string | null
+          email?: string | null
           experience?: string | null
           google_access_token?: string | null
           google_calendar_connected?: boolean | null
@@ -188,11 +228,13 @@ export type Database = {
           location?: string | null
           name: string
           name_ar: string
+          organization_id?: string | null
           phone?: string | null
           phone_code?: string | null
           rating?: number | null
           review_count?: number | null
           slot_duration?: number | null
+          slug?: string | null
           specialty: string
           specialty_ar: string
           token_expires_at?: string | null
@@ -208,6 +250,7 @@ export type Database = {
           city_id?: string
           created_at?: string
           display_name?: string | null
+          email?: string | null
           experience?: string | null
           google_access_token?: string | null
           google_calendar_connected?: boolean | null
@@ -219,11 +262,13 @@ export type Database = {
           location?: string | null
           name?: string
           name_ar?: string
+          organization_id?: string | null
           phone?: string | null
           phone_code?: string | null
           rating?: number | null
           review_count?: number | null
           slot_duration?: number | null
+          slug?: string | null
           specialty?: string
           specialty_ar?: string
           token_expires_at?: string | null
@@ -238,6 +283,13 @@ export type Database = {
             columns: ["active_google_account_id"]
             isOneToOne: false
             referencedRelation: "google_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "providers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

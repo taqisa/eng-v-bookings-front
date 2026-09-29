@@ -11,9 +11,9 @@ import { API_BASE_URL } from '@/lib/utils';
 interface Provider {
   id: string;
   name: string;
-  name_ar: string;
+  name: string;
   specialty: string;
-  specialty_ar: string;
+  specialty: string;
   image_filename: string | null;
   city_id: string;
   phone: string;
@@ -89,7 +89,7 @@ const BookingSystem: React.FC<BookingSystemProps> = ({ providerId }) => {
           userId: user.id,
           startTime: new Date().toISOString(), // Replace with actual start time
           endTime: new Date().toISOString(),   // Replace with actual end time
-          summary: `Booking with ${provider.name_ar}`,
+          summary: `Booking with ${provider.name}`,
           description: `Booking for ${user.email} at ${time}`,
         }),
       });
@@ -119,22 +119,23 @@ const BookingSystem: React.FC<BookingSystemProps> = ({ providerId }) => {
   return (
     <Card className="p-6 hover:scale-105 transition-all duration-300 max-w-md mx-auto">
       {/* Provider Image */}
-      <div className="w-24 h-24 mx-auto mb-6 rounded-full overflow-hidden bg-gray-200">
+      <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-indigo-100 p-1">
         <img
-          src={provider.image_filename || `https://majskvkyvflifttonwgr.supabase.co/storage/v1/object/public/pic/${provider.id}.jpg` || 'https://via.placeholder.com/96/4F46E5/FFFFFF?text=' + encodeURIComponent(provider.name_ar?.charAt(0) || 'د')}
-          alt={provider.name_ar}
-          className="w-full h-full object-cover"
+          src={provider.image_filename || `https://majskvkyvflifttonwgr.supabase.co/storage/v1/object/public/pic/${provider.id}.jpg`}
+          alt={provider.name || 'Provider'}
+          className="w-full h-full object-cover rounded-full"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = 'https://via.placeholder.com/96/4F46E5/FFFFFF?text=' + encodeURIComponent(provider.name_ar?.charAt(0) || 'د');
+            const initial = provider.name?.charAt(0) || 'P';
+            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(initial)}&background=4F46E5&color=fff&size=128`;
           }}
         />
       </div>
 
       {/* Provider Info */}
       <div className="text-center mb-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">{provider.name_ar}</h3>
-        <p className="text-blue-600 font-medium mb-3">{provider.specialty_ar} - {provider.city_id}</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">{provider.name}</h3>
+        <p className="text-blue-600 font-medium mb-3">{provider.specialty} - {provider.city_id}</p>
 
         {/* Rating */}
         <div className="flex items-center justify-center mb-3">

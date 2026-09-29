@@ -6,8 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthContext";
 import ScrollToTop from "@/components/ScrollToTop";
-import Index from "./pages/Index";
-import CityPage from "./pages/CityPage";
 import BookingPage from "./pages/BookingPage";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import GoogleCalendarCallback from "./pages/GoogleCalendarCallback";
@@ -15,8 +13,9 @@ import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import AccountPage from "./pages/AccountPage";
 import AboutPage from "./pages/AboutPage";
-import CategoryPage from "./pages/CategoryPage";
-import { useEffect } from "react"; // Added useEffect import
+import TenantRouter from "./pages/TenantRouter";
+import { useEffect } from "react";
+import { Navigate } from "react-router-dom";
 
 import { API_BASE_URL } from "@/lib/utils";
 
@@ -46,18 +45,19 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AuthProvider>
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <ScrollToTop />
             <Routes>
-              <Route path="/" element={<Index />} />
+              {/* Redirect root to /auth or another default page if logged in. For now, /auth */}
+              <Route path="/" element={<Navigate to="/auth" replace />} />
               <Route path="/auth" element={<AuthPage />} />
-              <Route path="/city/:cityId" element={<CityPage />} />
+              <Route path="/book/:slug" element={<TenantRouter />} />
               <Route path="/booking/:providerId" element={<BookingPage />} />
               <Route path="/booking-confirmation/:providerId" element={<BookingConfirmation />} />
               <Route path="/google-calendar-callback" element={<GoogleCalendarCallback />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/about" element={<AboutPage />} />
-              <Route path="/category/:categoryId" element={<CategoryPage />} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

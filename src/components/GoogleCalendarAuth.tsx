@@ -33,12 +33,19 @@ const GoogleCalendarAuth: React.FC<GoogleCalendarAuthProps> = ({
     try {
       const response = await fetch(`${API_BASE_URL}/auth/google/init?provider_id=${providerId}`);
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to initialize Google OAuth');
+      }
+      
       if (data.authUrl) {
         window.location.href = data.authUrl;
+      } else {
+        throw new Error('No authorization URL returned from server');
       }
     } catch (error) {
       console.error('Error initiating Google OAuth:', error);
-      toast.error('خطأ في ربط التقويم');
+      toast.error('Failed to connect to Google Calendar');
       setIsConnecting(false);
     }
   };
@@ -55,11 +62,11 @@ const GoogleCalendarAuth: React.FC<GoogleCalendarAuthProps> = ({
         throw new Error(errorData.error || 'Failed to disconnect');
       }
 
-      toast.success('تم إلغاء ربط التقويم بنجاح');
+      toast.success('Google Calendar disconnected successfully');
       onConnectionUpdate?.(); // Refresh the parent component's state
     } catch (error) {
       console.error('Error disconnecting Google Calendar:', error);
-      toast.error(`خطأ في إلغاء ربط التقويم: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to disconnect Google Calendar: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -76,9 +83,9 @@ const GoogleCalendarAuth: React.FC<GoogleCalendarAuthProps> = ({
           <Calendar className="w-12 h-12 text-blue-600" />
         </div>
         <div>
-          <h3 className="font-medium text-blue-900 mb-2">ربط تقويم Google</h3>
+          <h3 className="font-medium text-blue-900 mb-2">Connect Google Calendar</h3>
           <p className="text-sm text-blue-700 mb-4">
-            اربط تقويم Google لمزامنة المواعيد تلقائياً
+            Connect Google Calendar to automatically sync appointments
           </p>
         </div>
         <Button
@@ -86,7 +93,7 @@ const GoogleCalendarAuth: React.FC<GoogleCalendarAuthProps> = ({
           disabled={isConnecting}
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          {isConnecting ? 'جارٍ الربط...' : 'ربط تقويم Google'}
+          {isConnecting ? 'Connecting...' : 'Connect Google Calendar'}
         </Button>
       </div>
     </Card>

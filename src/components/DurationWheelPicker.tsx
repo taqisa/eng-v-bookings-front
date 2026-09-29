@@ -261,15 +261,15 @@ export default function DurationWheelPicker({
  return displayMode === "inline" ? (
  <div className="duration-wheel-picker" ref={pickerRef}>
  <div className="highlight" />
- <Wheel data={hours} value={selectedHour} onChange={setSelectedHour} unit="ساعة" loop={true} />
- <Wheel data={minutes} value={selectedMinute} onChange={setSelectedMinute} unit="دقيقة" loop={true} />
+ <Wheel data={hours} value={selectedHour} onChange={setSelectedHour} unit="hr" loop={true} />
+ <Wheel data={minutes} value={selectedMinute} onChange={setSelectedMinute} unit="min" loop={true} />
  </div>
  ) : (
  <div className="picker-container">
  <input
  ref={inputRef}
  type="text"
- value={`${selectedHour} ساعة و ${selectedMinute} دقيقة`}
+ value={`${selectedHour}hr ${selectedMinute}min`}
  onClick={() => setOpenPicker(true)}
  readOnly
  className="picker-input"
@@ -278,11 +278,11 @@ export default function DurationWheelPicker({
  <div className="picker-modal" ref={pickerRef}>
  <div className="duration-wheel-picker">
  <div className="highlight" />
- <Wheel data={hours} value={selectedHour} onChange={setSelectedHour} unit="ساعة" loop={true} />
- <Wheel data={minutes} value={selectedMinute} onChange={setSelectedMinute} unit="دقيقة" loop={true} />
+ <Wheel data={hours} value={selectedHour} onChange={setSelectedHour} unit="hr" loop={true} />
+ <Wheel data={minutes} value={selectedMinute} onChange={setSelectedMinute} unit="min" loop={true} />
  </div>
  <button className="picker-close-button" onClick={() => setOpenPicker(false)}>
- تم
+ Done
  </button>
  </div>
  )}

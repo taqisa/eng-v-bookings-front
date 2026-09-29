@@ -207,9 +207,9 @@ const ModernCalendar: React.FC<ModernCalendarProps> = ({
   };
 
   const durationOptions = [
-    { value: 30, label: "30 دقيقة" },
-    { value: 60, label: "ساعة" },
-    { value: 90, label: "ساعة ونصف" },
+    { value: 30, label: "30 min" },
+    { value: 60, label: "hr" },
+    { value: 90, label: "hr ونصف" },
     { value: 120, label: "ساعتان" },
     { value: 150, label: "ساعتان ونصف" },
     { value: 180, label: "3 ساعات" },
@@ -274,7 +274,7 @@ const ModernCalendar: React.FC<ModernCalendarProps> = ({
     <div className="space-y-6">
       {/* Client Type Selection */}
       <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-0 shadow-lg">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">نوع العميل</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">نوع الClient</h3>
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant={clientType === 'new' ? 'default' : 'outline'}
@@ -285,7 +285,7 @@ const ModernCalendar: React.FC<ModernCalendarProps> = ({
               }`}
           >
             <User className="w-5 h-5 ml-2" />
-            عميل جديد
+            Client جديد
           </Button>
           <Button
             variant={clientType === 'existing' ? 'default' : 'outline'}
@@ -296,7 +296,7 @@ const ModernCalendar: React.FC<ModernCalendarProps> = ({
               }`}
           >
             <UserCheck className="w-5 h-5 ml-2" />
-            عميل قديم
+            Client قديم
           </Button>
         </div>
       </Card>
@@ -386,7 +386,7 @@ const ModernCalendar: React.FC<ModernCalendarProps> = ({
       {selectedDate && clientType && (
         <Card className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-0 shadow-lg">
           <div className="flex items-center justify-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">اختر الوقت المتاح</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Select a time المتاح</h3>
             {loadingSlots && (
               <Loader2 className="w-5 h-5 animate-spin mr-2 text-purple-600" />
             )}
@@ -416,7 +416,7 @@ const ModernCalendar: React.FC<ModernCalendarProps> = ({
                 ))
               ) : (
                 <div className="col-span-full text-center py-8">
-                  <p className="text-gray-500">لا توجد أوقات متاحة في هذا التاريخ</p>
+                  <p className="text-gray-500">لا توجد أوقات متاحة في هذا Date</p>
                   <p className="text-sm text-gray-400 mt-2">يرجى اختيار تاريخ آخر</p>
                 </div>
               )}

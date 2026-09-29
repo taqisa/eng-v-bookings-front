@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { API_BASE_URL } from '@/lib/utils';
 
 interface AuthContextType {
   user: User | null;
@@ -46,13 +47,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const sessionCache = useRef<Session | null>(null); // لتخزين الجلسة مؤقتًا
+  const sessionCache = useRef<Session | null>(null); // // Cache session temporarily
 
   useEffect(() => {
-    // تحميل الجلسة الأولية
+    // // Load initial session
     const loadInitialSession = async () => {
       if (sessionCache.current) {
-        console.log('🔴 [AUTH] Using cached session:', sessionCache.current);
+        console.log('🔵 [AUTH] Using cached session:', sessionCache.current);
         setSession(sessionCache.current);
         setUser(sessionCache.current?.user ?? null);
         setLoading(false);
@@ -63,12 +64,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await retryWithBackoff(() =>
           supabase.auth.getSession()
         );
-        console.log('🔴 [AUTH] Initial session:', session);
+        console.log('🔵 [AUTH] Initial session:', session);
         sessionCache.current = session;
         setSession(session);
         setUser(session?.user ?? null);
       } catch (error) {
-        console.error('🔴 [AUTH] Error loading initial session:', error);
+        console.error('🔵 [AUTH] Error loading initial session:', error);
       } finally {
         setLoading(false);
       }
@@ -76,10 +77,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     loadInitialSession();
 
-    // إعداد مستمع حالة التوثيق
+    // // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔴 [AUTH] Auth state changed:', event, session);
+        console.log('🔵 [AUTH] Auth state changed:', event, session);
         sessionCache.current = session;
         setSession(session);
         setUser(session?.user ?? null);
@@ -92,6 +93,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (name: string, email: string, phone: string, password: string) => {
     try {
       console.log('🔴 [AUTH] Attempting signup with:', { name, email, phone });
+
+      // Check if phone already exists
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/resolve-phone`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+
+        if (response.ok) {
+          console.error('🔴 [AUTH] Phone number already registered:', phone);
+          return { error: { message: 'Phone number is already registered' } };
+        }
+      } catch (backendError) {
+        console.error('🔴 [AUTH] Backend fetch error during signup phone check:', backendError);
+        return { error: { message: 'Could not connect to server to verify phone number' } };
+      }
 
       const { data, error } = await retryWithBackoff(() =>
         supabase.auth.signUp({
@@ -146,18 +164,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let email = emailOrPhone;
 
       if (!emailOrPhone.includes('@')) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('email')
-          .eq('phone', emailOrPhone)
-          .single();
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/resolve-phone`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone: emailOrPhone }),
+          });
 
-        if (userError || !userData) {
-          console.error('🔴 [AUTH] User not found by phone:', userError);
-          return { error: { message: 'رقم الهاتف غير مسجل' } };
+          if (!response.ok) {
+            console.error('🔴 [AUTH] User not found by phone via backend');
+            return { error: { message: 'Phone number is not registered' } };
+          }
+
+          const data = await response.json();
+          email = data.email;
+        } catch (backendError) {
+          console.error('🔴 [AUTH] Backend fetch error:', backendError);
+          return { error: { message: 'Could not connect to server to verify phone number' } };
         }
-
-        email = userData.email;
       }
 
       const { error } = await retryWithBackoff(() =>

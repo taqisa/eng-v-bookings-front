@@ -15,7 +15,7 @@ const TimePicker: React.FC<TimePickerProps> = ({ onTimeChange }) => {
 
   return (
     <div className="alarm-container">
-      <h2>إعداد المنبه</h2>
+      <h2>إعداد الPMنبه</h2>
       <div className="time-select">
         <select value={hours} onChange={(e) => setHours(e.target.value)}>
           <option value="6">6</option>
@@ -36,8 +36,8 @@ const TimePicker: React.FC<TimePickerProps> = ({ onTimeChange }) => {
           <option value="44">44</option>
         </select>
         <select value={period} onChange={(e) => setPeriod(e.target.value)}>
-          <option value="AM">ص</option>
-          <option value="PM">م</option>
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
         </select>
       </div>
       <button onClick={() => onTimeChange('')}>إلغاء</button>

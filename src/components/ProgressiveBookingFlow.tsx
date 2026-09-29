@@ -10,9 +10,9 @@ import { useNavigate } from 'react-router-dom';
 interface Provider {
     id: string;
     name: string;
-    name_ar: string;
+    name: string;
     display_name: string | null;
-    specialty_ar: string;
+    specialty: string;
     image_filename: string | null;
     city_id: string;
 }
@@ -80,7 +80,7 @@ const UnifiedRosieBooking = () => {
             try {
                 const { data } = await supabase
                     .from('providers')
-                    .select('id, name, name_ar, display_name, specialty_ar, image_filename, city_id');
+                    .select('id, name, name, display_name, specialty, image_filename, city_id');
                 setProviders(data || []);
             } catch (e) {
                 console.error(e);
@@ -103,7 +103,7 @@ const UnifiedRosieBooking = () => {
     const filteredProviders = useMemo(() => {
         return providers.filter(p => {
             const cityMatch = !selectedCity || p.city_id === selectedCity;
-            const catMatch = !selectedCategory || p.specialty_ar.includes(selectedCategory);
+            const catMatch = !selectedCategory || p.specialty.includes(selectedCategory);
             return cityMatch && catMatch;
         });
     }, [providers, selectedCity, selectedCategory]);
@@ -818,8 +818,8 @@ const UnifiedRosieBooking = () => {
                                                                 alt="Provider"
                                                             />
                                                         </div>
-                                                        <h3 className="text-2xl font-bold text-white mb-2 leading-tight px-4">{activeProvider.name_ar}</h3>
-                                                        <p className="text-golden text-sm font-medium bg-golden/10 px-3 py-1 rounded-full">{activeProvider.specialty_ar}</p>
+                                                        <h3 className="text-2xl font-bold text-white mb-2 leading-tight px-4">{activeProvider.name}</h3>
+                                                        <p className="text-golden text-sm font-medium bg-golden/10 px-3 py-1 rounded-full">{activeProvider.specialty}</p>
                                                     </div>
 
                                                     {/* Carousel Indicators / Nav */}
@@ -871,7 +871,7 @@ const UnifiedRosieBooking = () => {
                                                                 onClick={handleConfirm}
                                                                 className="relative w-full py-4 rounded-xl font-bold text-black bg-golden shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
                                                             >
-                                                                <span>تأكيد الحجز فوراً</span>
+                                                                <span>Confirm Booking فوراً</span>
                                                                 <CheckCircle className="w-4 h-4" />
                                                             </button>
                                                         </div>

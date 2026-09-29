@@ -11,9 +11,9 @@ import { supabase } from '@/integrations/supabase/client';
 interface Provider {
   id: string;
   name: string;
-  name_ar: string;
+  name: string;
   display_name: string | null;
-  specialty_ar: string;
+  specialty: string;
   image_filename: string | null;
   city_id: string;
 }
@@ -41,7 +41,7 @@ const QuickBookingSystem = ({ onStateChange }: QuickBookingSystemProps) => {
     try {
       const { data, error } = await supabase
         .from('providers')
-        .select('id, name, name_ar, display_name, specialty_ar, image_filename, city_id');
+        .select('id, name, name, display_name, specialty, image_filename, city_id');
 
       if (error) {
         console.error('Error fetching providers:', error);
@@ -80,11 +80,11 @@ const QuickBookingSystem = ({ onStateChange }: QuickBookingSystemProps) => {
   // Filter providers by city, category, and search
   const filteredProviders = providers.filter(p => {
     const cityMatch = p.city_id === selectedCity || p.city_id === getCityDisplayName(selectedCity);
-    const categoryMatch = selectedCategory === 'all' || p.specialty_ar.includes(selectedCategory);
+    const categoryMatch = selectedCategory === 'all' || p.specialty.includes(selectedCategory);
     const searchMatch = searchQuery === '' ||
-      p.name_ar.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.display_name && p.display_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      p.specialty_ar.toLowerCase().includes(searchQuery.toLowerCase());
+      p.specialty.toLowerCase().includes(searchQuery.toLowerCase());
 
     return cityMatch && categoryMatch && searchMatch;
   });
@@ -175,7 +175,7 @@ const QuickBookingSystem = ({ onStateChange }: QuickBookingSystemProps) => {
                   <SelectItem value="طبيب" className="text-right hover:bg-white/10 text-white rounded-lg py-2">أطباء</SelectItem>
                   <SelectItem value="صالون" className="text-right hover:bg-white/10 text-white rounded-lg py-2">صالونات</SelectItem>
                   <SelectItem value="محامي" className="text-right hover:bg-white/10 text-white rounded-lg py-2">محاميين</SelectItem>
-                  <SelectItem value="علاج" className="text-right hover:bg-white/10 text-white rounded-lg py-2">علاج طبيعي</SelectItem>
+                  <SelectItem value="physiotherapy" className="text-right hover:bg-white/10 text-white rounded-lg py-2">Physiotherapy</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -183,7 +183,7 @@ const QuickBookingSystem = ({ onStateChange }: QuickBookingSystemProps) => {
             {/* Dummy Date Selector (Visual) */}
             <div className="flex-1">
               <label className="block text-xs font-bold text-gray-400 mb-2 flex items-center justify-end gap-1.5 uppercase tracking-wide">
-                <span>التاريخ</span>
+                <span>Date</span>
                 <Calendar className="w-3.5 h-3.5 text-golden" />
               </label>
               <button
@@ -194,7 +194,7 @@ const QuickBookingSystem = ({ onStateChange }: QuickBookingSystemProps) => {
                   }`}
               >
                 <span className="text-xs opacity-50"><ChevronLeft className="w-4 h-4" /></span>
-                <span>{dateSelected ? 'تم التحديد' : 'اليوم'}</span>
+                <span>{dateSelected ? 'Selected' : 'Today'}</span>
               </button>
             </div>
           </div>
@@ -216,14 +216,14 @@ const QuickBookingSystem = ({ onStateChange }: QuickBookingSystemProps) => {
                     <div className="relative flex-shrink-0">
                       <img
                         src={filteredProviders[currentIndex].image_filename || 'https://tinyurl.com/3kp7r9rj'}
-                        alt={filteredProviders[currentIndex].name_ar}
+                        alt={filteredProviders[currentIndex].name}
                         className="w-14 h-14 rounded-full object-cover border-2 border-white/10 group-hover/provider:border-golden/50 transition-colors"
                       />
                       <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#121212] rounded-full"></span>
                     </div>
                     <div className="flex-1 text-right min-w-0">
-                      <h4 className="text-white font-bold truncate">{filteredProviders[currentIndex].name_ar}</h4>
-                      <p className="text-golden text-xs truncate">{filteredProviders[currentIndex].specialty_ar}</p>
+                      <h4 className="text-white font-bold truncate">{filteredProviders[currentIndex].name}</h4>
+                      <p className="text-golden text-xs truncate">{filteredProviders[currentIndex].specialty}</p>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-golden text-black flex items-center justify-center transform group-hover/provider:scale-110 transition-transform">
                       <ChevronLeft className="w-5 h-5" />
@@ -252,7 +252,7 @@ const QuickBookingSystem = ({ onStateChange }: QuickBookingSystemProps) => {
               </div>
             ) : (
               <div className="h-24 rounded-2xl border border-dashed border-white/10 flex items-center justify-center text-gray-500 text-sm">
-                {selectedCity ? 'لا توجد نتائج' : 'اختر مدينتك للبدء'}
+                {selectedCity ? 'No results' : 'Select your city to start'}
               </div>
             )}
           </div>
