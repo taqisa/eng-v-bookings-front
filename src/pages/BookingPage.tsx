@@ -1,6 +1,6 @@
 // src/pages/BookingPage.tsx
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Star, MapPin, Phone, Award, ArrowUpRight, MessageCircle } from "lucide-react";
@@ -13,6 +13,7 @@ import { Database } from "@/integrations/supabase/types";
 import { API_BASE_URL } from "@/lib/utils";
 
 import { appointmentDate, appointmentTime } from '@/lib/appointmentCard';
+import { saveBookingDraft, readBookingDraft, clearBookingDraft } from '@/lib/bookingDraft';
 import { clockParts } from '@/lib/timeSlots';
 import { requestAvailability } from '@/lib/availability-request';
 import '@/components/Confirmation.css';
@@ -51,6 +52,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   const { providerId: routeProviderId } = useParams<{ providerId: string }>();
   const providerId = providerIdProp || routeProviderId;
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
   const clientLabel = 'Service';
@@ -159,18 +161,13 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   }, [providerId]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      const currentPath = window.location.pathname + window.location.search;
-      navigate(`/auth?redirectTo=${encodeURIComponent(currentPath)}`);
-      return;
-    }
-    if (user && providerId) {
-      setShowConfirmation(false);
-      setBookingData({ date: "", time: "", notes: "", serviceId: null, duration: 30 });
-      void fetchProvider();
-    }
+    const draft = providerId && new URLSearchParams(location.search).get('resume') === '1'
+      ? readBookingDraft(providerId) : null;
+    setBookingData(draft || { date: '', time: '', notes: '', serviceId: null, duration: 30 });
+    setShowConfirmation(!!draft);
+    if (providerId) void fetchProvider();
     return () => { providerRequest.current += 1; };
-  }, [user, authLoading, providerId, navigate, fetchProvider]);
+  }, [providerId, fetchProvider, location.search]);
 
   const handlePreliminarySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,12 +187,28 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   };
 
   const handleFinalConfirmation = async () => {
-    if (!user || !provider || submissionLock.current) return;
+    if (!provider || authLoading || submissionLock.current) return;
     const selectedService = services.find(service => service.id === bookingData.serviceId);
     const time = clockParts(bookingData.time);
     if (!selectedService || !bookingData.date || !time) {
       toast.error('Please choose a service, date and valid appointment time.');
       setShowConfirmation(false);
+      return;
+    }
+    if (selectedService.duration_minutes !== bookingData.duration) {
+      toast.error('This service has changed. Please select it again.');
+      setBookingData(prev => ({ ...prev, serviceId: null, date: '', time: '' }));
+      setShowConfirmation(false);
+      return;
+    }
+    if (!user) {
+      try {
+        saveBookingDraft(provider.id, { ...bookingData, serviceId: selectedService.id });
+        const returnTo = `${location.pathname}?resume=1`;
+        navigate(`/auth?redirectTo=${encodeURIComponent(returnTo)}`);
+      } catch {
+        toast.error('Your selections could not be saved. Allow browser storage and try again.');
+      }
       return;
     }
     submissionLock.current = true;
@@ -235,6 +248,8 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
         toast.error('Error creating booking');
         return;
       }
+
+      clearBookingDraft(provider.id);
 
       // ALWAYS call the backend to trigger notifications (WhatsApp/SMS) and Calendar Sync
       try {
@@ -281,7 +296,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
     }
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="booking-page min-h-screen">
         <Header />
@@ -377,10 +392,10 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
                   </dl>
                   <label htmlFor="appointment-notes">Message to your provider <span>Optional</span></label>
                   <Textarea id="appointment-notes" value={bookingData.notes} onChange={e => setBookingData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Is there anything you would like your provider to know?" rows={3} maxLength={2000} />
-                  <p className="booking-review-note">Your appointment is booked when you confirm. You can then save your appointment as an image.</p>
+                  <p className="booking-review-note">{user ? 'Your appointment is booked when you confirm. You can then save your appointment as an image.' : 'Sign in to finish booking. Your service, time and note will be saved while you sign in.'}</p>
                   <div className="booking-review-actions">
                     <button type="button" className="confirmation-secondary" disabled={submitting} onClick={() => setShowConfirmation(false)}>Edit appointment</button>
-                    <button type="button" className="confirmation-primary" onClick={handleFinalConfirmation} disabled={submitting}>{submitting ? 'Confirming…' : 'Confirm booking'}</button>
+                    <button type="button" className="confirmation-primary" onClick={handleFinalConfirmation} disabled={submitting || authLoading}>{submitting ? 'Confirming…' : authLoading ? 'Please wait…' : user ? 'Confirm booking' : 'Sign in to confirm'}</button>
                   </div>
                 </Card>
               )}

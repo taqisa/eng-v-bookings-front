@@ -9,7 +9,7 @@ require('node:fs').mkdirSync('test-results', { recursive: true });
  const provider={id:'provider-1',name:'Emma Wilson',display_name:'Willow Studio',specialty:'Wellness & personal care',rating:4.9,review_count:86,experience:'10 years of experience',location:'24 Garden Street, London',phone:'+442079460123',whatsapp:'+442079460123',image_filename:'/provider-placeholder.svg',working_days:['sunday','monday','tuesday','wednesday','thursday','friday','saturday'],google_calendar_connected:true,slot_duration:30};
  const services=Array.from({length:7},(_,i)=>({id:'service-'+i,name:['Initial consultation','Follow-up appointment','Personal care session','Wellness consultation','Extended appointment','Express appointment','Treatment session'][i],duration_minutes:30,provider_id:provider.id}));
  let booking={id:'booking-1234',provider_id:provider.id,user_id:'user-1',provider_name:provider.name,date:'2026-10-05',time:'09:00:00',duration_minutes:30,service_id:'service-0',status:'confirmed'};
- let creates=0;const reads=[];let slotsFail=false;let searchDelay=0;
+ let creates=0;const reads=[];let slotsFail=false;let slotsEmpty=false;let searchDelay=0;
  await context.addInitScript(()=>{if(localStorage.getItem('smoke-signed-out'))return;localStorage.setItem('sb-majskvkyvflifttonwgr-auth-token',JSON.stringify({access_token:'test-access-token',refresh_token:'test-refresh-token',expires_at:4102444800,expires_in:360000,user:{id:'user-1',email:'test@example.test',user_metadata:{name:'Alex'},aud:'authenticated',role:'authenticated'}}));});
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
@@ -19,7 +19,7 @@ require('node:fs').mkdirSync('test-results', { recursive: true });
   if(url.pathname.includes('/rest/v1/services'))return json(url.searchParams.has('id')?{name:'Initial consultation'}:services);
   if(url.pathname.includes('/rest/v1/users'))return json({name:'Alex Morgan'});
   if(url.pathname.includes('/rest/v1/bookings')){if(route.request().method()==='POST'){creates++;const data=route.request().postDataJSON();booking={...booking,...(Array.isArray(data)?data[0]:data)};return json(booking,201);} reads.push(url);if(url.searchParams.get('id')==='eq.missing')return json({message:'Not found'},406);return json(booking);}
-  if(url.pathname.endsWith('/available-slots'))return slotsFail?json({error:'unavailable'},500):json({availableSlots:[{start:'9:00 AM'},{start:'1:30 PM'},{start:'6:00 PM'}]});
+  if(url.pathname.endsWith('/available-slots'))return slotsFail?json({error:'unavailable'},500):json({availableSlots:slotsEmpty?[]:[{start:'9:00 AM'},{start:'1:30 PM'},{start:'6:00 PM'}]});
   if(url.pathname.endsWith('/next-available-slot')){if(searchDelay)await new Promise(r=>setTimeout(r,searchDelay));return json({available_slot:{start:'9:00 AM',start_iso:'2026-10-05T09:00:00+03:00',end:'9:30 AM'}});}
   if(url.pathname==='/bookings')return json({});
   if(url.pathname.includes('/auth/v1/user'))return json({id:'user-1',email:'test@example.test'});
@@ -73,7 +73,44 @@ require('node:fs').mkdirSync('test-results', { recursive: true });
  assert.equal(await page.locator('.appointment-receipt').count(),0);
  await page.evaluate(()=>{localStorage.clear();localStorage.setItem('smoke-signed-out','true')});
  await page.goto('http://127.0.0.1:8080/book/willow');
- await page.waitForURL('**/auth?redirectTo=%2Fbook%2Fwillow');
+ await page.getByRole('heading',{name:'Book your appointment'}).waitFor();
+ assert.equal(new URL(page.url()).pathname, '/book/willow');
+ await page.getByRole('button',{name:'Select Initial consultation',exact:true}).click();
+ searchDelay=0;
+ await page.getByRole('button',{name:'Find the nearest appointment',exact:true}).click();
+ await page.getByRole('button',{name:'Review this appointment'}).click();
+ await page.getByLabel('Message to your provider').fill('Saved while signing in');
+ // Blocked storage must leave the customer on review without losing selections.
+ await page.evaluate(()=>{window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new Error('Storage blocked')}});
+ await page.getByRole('button',{name:'Sign in to confirm'}).click();
+ await page.getByRole('heading',{name:'Review your appointment'}).waitFor();
+ assert.equal(creates,1);
+ await page.evaluate(()=>{Storage.prototype.setItem=window.originalSetItem});
+ await page.getByRole('button',{name:'Sign in to confirm'}).click();
+ await page.waitForURL('**/auth?redirectTo=%2Fbook%2Fwillow%3Fresume%3D1');
+ assert.equal(creates,1);
+ const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('bookings:booking-draft:provider-1')));
+ assert.equal(saved.draft.notes,'Saved while signing in');
+ // Simulate a completed sign-in, then exercise AuthPage's real return redirect.
+ await page.evaluate(()=>localStorage.removeItem('smoke-signed-out'));
+ await page.reload();
+ await page.waitForURL('**/book/willow?resume=1');
+ await page.getByRole('heading',{name:'Review your appointment'}).waitFor();
+ assert.equal(await page.getByLabel('Message to your provider').inputValue(),'Saved while signing in');
+ assert.match(await page.locator('.booking-review').innerText(),/Monday, October 5, 2026/);
+ // A slot taken during sign-in must not create a booking.
+ slotsEmpty=true;
+ await page.getByRole('button',{name:'Confirm booking',exact:true}).click();
+ await page.getByRole('heading',{name:'Book your appointment'}).waitFor();
+ assert.equal(creates,1);
+ slotsEmpty=false;
+ await page.getByRole('button',{name:'Find the nearest appointment',exact:true}).click();
+ await page.getByRole('button',{name:'Review this appointment'}).click();
+ await page.getByRole('button',{name:'Confirm booking',exact:true}).click();
+ await page.getByRole('heading',{name:'Your appointment is confirmed.'}).waitFor();
+ assert.equal(creates,2);
+ assert.equal(booking.notes,'Saved while signing in');
+ assert.equal(await page.evaluate(()=>sessionStorage.getItem('bookings:booking-draft:provider-1')),null);
  assert.equal(await page.getByText('My Bookings',{exact:true}).count(),0);
  assert.deepEqual(errors,[]);console.log('PASS: provider slug, expanded services, nearest appointment timezone, notes, single booking write, scoped receipt, PNG download, manual time selection, service reset, availability retry, mobile overflow.');
  await browser.close();

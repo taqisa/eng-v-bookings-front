@@ -28,3 +28,23 @@ test('available times are deduplicated and ordered into English day periods', ()
     ['Morning', ['9:00 AM']], ['Afternoon', ['1:00 PM']], ['Evening', ['6:00 PM']],
   ]);
 });
+
+const { saveBookingDraft, readBookingDraft, clearBookingDraft } = await loadHelper('../src/lib/bookingDraft.ts');
+test('booking drafts stay provider-scoped, expire, and reject malformed storage', () => {
+  const entries = new Map();
+  globalThis.sessionStorage = { setItem: (key, value) => entries.set(key, value), getItem: key => entries.get(key) || null, removeItem: key => entries.delete(key) };
+  const draft = { date: '2026-10-05', time: '9:00 AM', notes: 'A private note', serviceId: 'service-1', duration: 30 };
+  saveBookingDraft('provider-1', draft);
+  assert.deepEqual(readBookingDraft('provider-1'), draft);
+  assert.equal(readBookingDraft('provider-2'), null);
+  clearBookingDraft('provider-1');
+  assert.equal(readBookingDraft('provider-1'), null);
+  const key = 'bookings:booking-draft:provider-1';
+  for (const value of ['broken JSON', JSON.stringify({ savedAt: Date.now() - 86400001, draft }), JSON.stringify({ savedAt: Date.now(), draft: { ...draft, notes: 42 } })]) {
+    entries.set(key, value);
+    assert.equal(readBookingDraft('provider-1'), null);
+    assert.equal(entries.has(key), false);
+  }
+  globalThis.sessionStorage = { getItem: () => { throw new Error('Disabled'); }, removeItem: () => { throw new Error('Disabled'); } };
+  assert.equal(readBookingDraft('provider-1'), null);
+});
