@@ -1,0 +1,17 @@
+.booking-times-intro { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; color:#4b5563; font-size:14px; margin-bottom:24px; }
+.booking-times-intro>span { color:#6b7280; }
+.booking-time-group { margin:0 0 24px; padding:0; border:0; min-width:0; }
+.booking-time-group legend { display:flex; align-items:center; gap:12px; width:100%; padding-bottom:12px; color:#1f2937; font-size:16px; font-weight:500; }
+.booking-time-group legend>span { font-size:13px; font-weight:400; color:#6b7280; }
+.booking-time-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(92px,1fr)); gap:10px; }
+.booking-time-option { position:relative; display:flex; justify-content:center; align-items:center; gap:7px; min-height:48px; padding:10px 18px; border:1px solid #d6d4cc; border-radius:6px; background:#fff; color:#20242c; transition:background .15s,border-color .15s; font-variant-numeric:tabular-nums; }
+.booking-time-option>span { font-family:Arial,sans-serif; font-size:17px; }
+.booking-time-option small { font-size:13px; }
+.booking-time-option:hover { border-color:#aa8d50; background:#faf7ef; }
+.booking-time-option[aria-pressed=true] { background:#f3ecdd; border-color:#a98742; color:#513e16; }
+.time-selected-check { position:absolute; top:3px; right:3px; opacity:0; }
+.booking-time-option[aria-pressed=true] .time-selected-check { opacity:1; }
+.booking-time-option:focus-visible { outline:2px solid #a98742; outline-offset:3px; }
+.booking-time-option:disabled { opacity:.5; cursor:not-allowed; }
+.booking-time-selection { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:15px; color:#665021; border-top:1px solid #ece6d9; padding-top:16px; }
+@media(max-width:400px) { .booking-time-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; } .booking-time-option { padding-inline:8px; } }

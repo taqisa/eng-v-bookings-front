@@ -1,74 +1,38 @@
 // src/pages/BookingPage.tsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Star, MapPin, Phone, ArrowRight, AlertCircle, MessageCircle } from "lucide-react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import GoogleCalendarAuth from "@/components/GoogleCalendarAuth";
+import { Star, MapPin, Phone, Award, ArrowUpRight, MessageCircle } from "lucide-react";
+import { BookingSiteHeader as Header, BookingSiteFooter as Footer } from "@/components/BookingSiteChrome";
 import { useAuth } from "@/components/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import EnhancedModernCalendar from "@/components/EnhancedModernCalendar";
-import BookingHeader from "@/components/BookingHeader";
 import { Database } from "@/integrations/supabase/types";
 import { API_BASE_URL } from "@/lib/utils";
 
-const language = "en";
+import { appointmentDate, appointmentTime } from '@/lib/appointmentCard';
+import { clockParts } from '@/lib/timeSlots';
+import { requestAvailability } from '@/lib/availability-request';
+import '@/components/Confirmation.css';
+import '@/components/BookingTheme.css';
 
 
 // Manually define types missing from the generated Database type
 interface ServiceRow {
   id: string;
-  name: string | null;
-  name_ar: string | null;
-  duration_minutes: number | null;
-  provider_id: string;
-  [key: string]: any;
-}
+  name: string;
+  duration_minutes: number;
 
-interface ProviderTypeRow {
-  client_label: string | null;
-  [key: string]: any;
 }
 
 // Extend existing Provider type to include missing fields found in usage
 type BaseProvider = Database['public']['Tables']['providers']['Row'];
 interface Provider extends BaseProvider {
   provider_type_id?: string;
-  [key: string]: any;
+
 }
-
-const convertArabicToWestern = (s: string) => {
-  const arabicNumerals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-  const westernNumerals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-  return s.split('').map(char => westernNumerals[arabicNumerals.indexOf(char)] || char).join('');
-};
-
-const convertTo24Hour = (time12h: string): string => {
-  const westernTime = convertArabicToWestern(time12h);
-  const [time, modifier] = westernTime.split(' ');
-  if (!time || !modifier) {
-    console.error("🔴 [TIME CONVERT] Invalid time format:", westernTime);
-    return "00:00:00";
-  }
-  let [hours, minutes] = time.split(':');
-  if (!hours || !minutes) {
-    console.error("🔴 [TIME CONVERT] Invalid time parts:", time);
-    return "00:00:00";
-  }
-  if (hours === '12') {
-    hours = modifier === 'PM' ? '12' : '00';
-  } else {
-    if (modifier === 'PM') {
-      hours = String(parseInt(hours, 10) + 12);
-    }
-  }
-  minutes = minutes.padEnd(2, '0').substring(0, 2);
-  return `${hours.padStart(2, '0')}:${minutes}:00`;
-};
 
 // Fix experience strings that have the number at the end, e.g. "years of experience in Family Medicine 8"
 const formatExperience = (exp: string): string => {
@@ -89,7 +53,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [clientLabel, setClientLabel] = useState<string>('Client');
+  const clientLabel = 'Service';
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingData, setBookingData] = useState({
@@ -102,7 +66,8 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const confirmationSectionRef = useRef<HTMLDivElement>(null);
-  const providerCache = useRef<Provider | null>(null);
+  const submissionLock = useRef(false);
+  const providerRequest = useRef(0);
 
   useEffect(() => {
     if (showConfirmation) {
@@ -116,24 +81,19 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
     if (!providerId) {
       console.error('🔴 [FETCH] No providerId provided');
       toast.error('Provider ID not found');
-      navigate('/');
       return;
     }
 
-    if (providerCache.current) {
-      console.log('🔴 [FETCH] Using cached provider data for:', providerId);
-      setProvider(providerCache.current);
-      setLoading(false);
-      return;
-    }
-
+    const request = ++providerRequest.current;
+    setLoading(true);
+    setProvider(null);
+    setServices([]);
     try {
-      console.log('🔵 [BOOKING] Fetching provider details for:', providerId);
       const { data: providerData, error: providerError } = await (supabase
-        .from('providers' as any)
+        .from('providers')
         .select(`
           id,
-          name_ar,
+          name,
           google_calendar_connected,
           active_google_account_id,
           working_days,
@@ -144,7 +104,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
           slot_duration,
           provider_type_id,
           display_name,
-          specialty_ar,
+          specialty,
           rating,
           review_count,
           experience,
@@ -154,83 +114,62 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
           image_filename
         `)
         .eq('id', providerId)
-        .single() as Promise<any>);
+        .single() as unknown as PromiseLike<{ data: Provider | null; error: { message: string; details: string } | null }>);
 
+      if (request !== providerRequest.current) return;
       if (providerError || !providerData) {
         console.error('🔴 [FETCH] Error fetching provider:', providerError?.message, providerError?.details);
         toast.error('Provider not found');
-        const params = new URLSearchParams(window.location.search);
-        const redirectTo = params.get('redirectTo');
-        navigate(redirectTo || '/');
+
         return;
       }
 
-      let clientLabelValue = 'Client';
-      if (providerData?.provider_type_id) {
-        const { data: typeData, error: typeError } = await (supabase
-          .from('provider_types' as any)
-          .select('client_label')
-          .eq('id', providerData.provider_type_id)
-          .single() as Promise<any>);
-        if (typeError) {
-          console.warn('🔴 [FETCH] Client label fetch error:', typeError.message, typeError.details);
-        } else if (typeData?.client_label && typeData.client_label.trim() !== '') {
-          clientLabelValue = typeData.client_label;
-        }
-      }
-      setClientLabel(clientLabelValue);
-
-      const { data: servicesData, error: servicesError } = await (supabase
-        .from('services' as any)
-        .select('id, name, name_ar, duration_minutes')
-        .eq('provider_id', providerId) as Promise<any>);
+      const { data: servicesData, error: servicesError } = await (
+        // services exists in the deployed schema but not in generated types.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).from('services')
+        .select('id, name, duration_minutes')
+        .eq('provider_id', providerId) as PromiseLike<{ data: ServiceRow[] | null; error: { message: string; details: string } | null }>);
       let sanitizedServices: ServiceRow[] = [];
       if (servicesError) {
         console.error('🔴 [FETCH] Error fetching services:', servicesError.message, servicesError.details);
         toast.error('Failed to fetch services');
       } else if (servicesData && servicesData.length > 0) {
-        sanitizedServices = (servicesData as any[]).map(service => ({
+        sanitizedServices = servicesData.map(service => ({
           ...service,
           name: service.name && service.name.trim() !== '' ? service.name : 'Unnamed Service',
-          name_ar: service.name_ar && service.name_ar.trim() !== '' ? service.name_ar : (service.name && service.name.trim() !== '' ? service.name : 'Unnamed Service'),
           duration_minutes: service.duration_minutes || 30
         }));
-        console.log('🔴 [FETCH] Services fetched:', sanitizedServices);
       } else {
         console.warn('🔴 [FETCH] No services found for provider:', providerId);
         toast.warning('No services available for this provider');
       }
+      if (request !== providerRequest.current) return;
       setServices(sanitizedServices);
 
-      console.log('🔴 [FETCH] Provider data loaded:', {
-        id: providerData.id,
-        name: providerData.name_ar,
-        client_label: clientLabelValue,
-        services_count: sanitizedServices.length
-      });
-
-      providerCache.current = providerData;
       setProvider(providerData);
     } catch (error) {
+      if (request !== providerRequest.current) return;
       console.error('🔴 [FETCH] Exception:', error);
       toast.error('Error loading data');
       setServices([]);
-      navigate('/');
     } finally {
-      setLoading(false);
+      if (request === providerRequest.current) setLoading(false);
     }
-  }, [providerId, navigate]);
+  }, [providerId]);
 
   useEffect(() => {
     if (!authLoading && !user) {
-      console.log('🔴 [AUTH] No user, redirecting to auth page');
       const currentPath = window.location.pathname + window.location.search;
       navigate(`/auth?redirectTo=${encodeURIComponent(currentPath)}`);
       return;
     }
     if (user && providerId) {
-      fetchProvider();
+      setShowConfirmation(false);
+      setBookingData({ date: "", time: "", notes: "", serviceId: null, duration: 30 });
+      void fetchProvider();
     }
+    return () => { providerRequest.current += 1; };
   }, [user, authLoading, providerId, navigate, fetchProvider]);
 
   const handlePreliminarySubmit = (e: React.FormEvent) => {
@@ -247,31 +186,32 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
       toast.error('Please select a time');
       return;
     }
-    console.log('🔴 [SUBMIT] Preliminary booking data:', bookingData);
     setShowConfirmation(true);
   };
 
   const handleFinalConfirmation = async () => {
-    if (!user || !provider) return;
+    if (!user || !provider || submissionLock.current) return;
+    const selectedService = services.find(service => service.id === bookingData.serviceId);
+    const time = clockParts(bookingData.time);
+    if (!selectedService || !bookingData.date || !time) {
+      toast.error('Please choose a service, date and valid appointment time.');
+      setShowConfirmation(false);
+      return;
+    }
+    submissionLock.current = true;
     setSubmitting(true);
     try {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('name, phone, email')
-        .eq('id', user.id)
-        .single();
-      if (userError) {
-        console.error('🔴 [BOOKING] Error fetching user data:', userError);
-        toast.error('Error loading user data');
+      // Recheck availability without changing the existing booking API contract.
+      const query = new URLSearchParams({ date: bookingData.date, serviceId: selectedService.id, duration: String(selectedService.duration_minutes) });
+      const availability = await requestAvailability<{ availableSlots?: { start: string }[] }>(`${API_BASE_URL}/providers/${provider.id}/available-slots?${query}`);
+      if (!availability.ok) throw new Error('Availability check failed');
+      if (!availability.data.availableSlots?.some(slot => clockParts(slot.start)?.minutes === time.minutes)) {
+        toast.error('This appointment is no longer available. Please choose another time.');
+        setBookingData(prev => ({ ...prev, time: '' }));
+        setShowConfirmation(false);
         return;
       }
-      const timeIn24HourFormat = convertTo24Hour(bookingData.time);
-      const selectedService = services.find(s => s.id === bookingData.serviceId);
-      console.log('🔵 [BOOKING] Fetching services for provider type:', (provider as any).provider_type_id);
-      const { data: servicesData, error: servicesError } = await (supabase
-        .from('services' as any)
-        .select('*')
-        .eq('provider_type_id', (provider as any).provider_type_id) as any);
+      const timeIn24HourFormat = `${String(Math.floor(time.minutes / 60)).padStart(2, '0')}:${String(time.minutes % 60).padStart(2, '0')}:00`;
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert([
@@ -281,12 +221,12 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
             provider_name: provider.display_name || provider.name,
             date: bookingData.date,
             time: timeIn24HourFormat,
-            notes: bookingData.notes,
+            notes: bookingData.notes.trim().slice(0, 2000),
             service_id: bookingData.serviceId,
-            duration_minutes: bookingData.duration,
+            duration_minutes: selectedService.duration_minutes,
             status: 'confirmed',
             confirmed_at: new Date().toISOString()
-          }
+          } as Database['public']['Tables']['bookings']['Insert']
         ])
         .select()
         .single();
@@ -295,19 +235,18 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
         toast.error('Error creating booking');
         return;
       }
-      console.log('🔴 [BOOKING] Booking created:', booking);
 
       // ALWAYS call the backend to trigger notifications (WhatsApp/SMS) and Calendar Sync
       try {
         const res = await fetch(`${API_BASE_URL}/bookings`, {
           method: 'POST',
+          signal: AbortSignal.timeout(15000),
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bookingId: booking.id }),
         });
 
         if (res.ok) {
           const data = await res.json();
-          console.log('🔵 [BACKEND] Response:', data);
 
           let successMessage = 'Booking confirmed successfully';
 
@@ -337,13 +276,14 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
       console.error('🔴 [BOOKING] Error confirming booking:', error);
       toast.error('Error confirming booking');
     } finally {
+      submissionLock.current = false;
       setSubmitting(false);
     }
   };
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-golden/5 to-golden/10">
+      <div className="booking-page min-h-screen">
         <Header />
         <div className="pt-20 flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-golden"></div>
@@ -355,7 +295,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
 
   if (!provider) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-golden/5 to-golden/10">
+      <div className="booking-page min-h-screen">
         <Header />
         <div className="pt-20 text-center">
           <h1 className="text-2xl font-bold text-gray-900">Provider not found</h1>
@@ -366,30 +306,23 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="booking-page min-h-screen">
       <Header />
       <main className="pt-20 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center mb-8">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center text-gray-600 hover:text-golden transition-all duration-300 hover:scale-105"
-            >
-              <ArrowRight className="w-5 h-5 ml-2" />
-              Back
-            </button>
-          </div>
-          <div className="grid lg:grid-cols-2 gap-8">
-            <Card className="p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
+          <div className="booking-panels grid lg:grid-cols-2 gap-8">
+            <Card className="provider-panel p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
               <div className="text-center mb-6">
                 <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden bg-gradient-to-br from-golden/20 to-golden/30 p-1">
                   <img
                     src={provider.image_filename || `https://majskvkyvflifttonwgr.supabase.co/storage/v1/object/public/pic/${provider.id}.jpg`}
                     alt={provider.display_name || provider.name}
                     className="w-full h-full object-cover rounded-full"
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(provider.name?.charAt(0) || 'P')}&background=D4AF37&color=fff&size=128`;
+                      target.onerror = null;
+                      target.src = '/provider-placeholder.svg';
                     }}
                   />
                 </div>
@@ -398,78 +331,21 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
                 )}
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{provider.name}</h1>
                 <p className="text-golden font-medium mb-4 text-lg">{provider.specialty}</p>
-                <div className="flex items-center justify-center mb-6">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-5 h-5 ${i < Math.floor(provider.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                      />
-                    ))}
-                  </div>
-                  <span className="mr-3 text-gray-600">
-                    {provider.rating || 0} ({provider.review_count || 0} reviews)
-                  </span>
+                <div className="provider-rating" aria-label={`${provider.rating || 0} out of 5, ${provider.review_count || 0} reviews`}>
+                  <Star size={22} aria-hidden="true" /><strong>{provider.rating || 0}</strong><span>out of 5</span><span className="provider-rating-count">{provider.review_count || 0} reviews</span>
                 </div>
               </div>
-              <div className="space-y-3 text-gray-600 mb-6">
-                {provider.experience && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="flex-shrink-0 w-8 h-8 bg-golden/10 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-golden rounded-full"></div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 leading-snug">{formatExperience(provider.experience)}</span>
-                  </div>
-                )}
-                {provider.location && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(provider.location)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors group"
-                  >
-                    <div className="flex-shrink-0 w-8 h-8 bg-golden/10 rounded-full flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                      <MapPin className="w-4 h-4 text-golden group-hover:text-blue-600 transition-colors" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors leading-snug">{provider.location}</span>
-                  </a>
-                )}
-                {provider.phone && (
-                  <a href={`tel:${provider.phone}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
-                    <div className="flex-shrink-0 w-8 h-8 bg-golden/10 rounded-full flex items-center justify-center group-hover:bg-golden/20 transition-colors">
-                      <Phone className="w-4 h-4 text-golden" />
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800">{provider.phone}</span>
-                  </a>
-                )}
-                {provider.whatsapp && (
-                  <a
-                    href={`https://wa.me/${provider.whatsapp.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-green-50 rounded-xl hover:bg-green-100 transition-colors group"
-                  >
-                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                      <MessageCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium text-green-700">Contact via WhatsApp</span>
-                  </a>
-                )}
+              <div className="provider-facts">
+                {provider.experience && <div className="provider-fact"><Award className="provider-fact-icon" /><div><span className="provider-fact-label">Experience</span><p>{formatExperience(provider.experience)}</p></div></div>}
+                {provider.location && <div className="provider-fact"><MapPin className="provider-fact-icon" /><div><span className="provider-fact-label">Location</span><p>{provider.location}</p></div></div>}
+                {provider.phone && <a href={`tel:${provider.phone.replace(/[^+\d]/g, '')}`} className="provider-fact provider-contact"><Phone className="provider-fact-icon" /><div><span className="provider-fact-label">Call your provider</span><p>{provider.phone}</p></div><ArrowUpRight className="provider-contact-arrow" /></a>}
+                {provider.whatsapp && <a href={`https://wa.me/${provider.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="provider-fact provider-contact"><MessageCircle className="provider-fact-icon" /><div><span className="provider-fact-label">Send a message</span><p>Contact via WhatsApp</p></div><ArrowUpRight className="provider-contact-arrow" /></a>}
               </div>
-              {!provider.google_calendar_connected && (
-                <GoogleCalendarAuth
-                  providerId={provider.id}
-                  isConnected={provider.google_calendar_connected}
-                  onConnectionUpdate={fetchProvider}
-                />
-              )}
             </Card>
-            <div className="space-y-7">
+            <div className="booking-panel-column">
               {!showConfirmation ? (
                 <Card ref={confirmationSectionRef} className="p-0 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-xl">
-                  <BookingHeader 
-                      isDateTimeSelected={!!bookingData.date && !!bookingData.time} 
-                    />
+                  <div className="booking-heading"><div className="confirmation-eyebrow">YOUR APPOINTMENT</div><h2>Book your appointment</h2></div>
                   <form onSubmit={handlePreliminarySubmit} className="space-y-6">
                     <EnhancedModernCalendar
                       selectedDate={bookingData.date}
@@ -479,7 +355,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
                       clientLabel={clientLabel}
                       services={services}
                       serviceId={bookingData.serviceId}
-                      onServiceSelect={(serviceId, duration) => setBookingData(prev => ({ ...prev, serviceId, duration }))}
+                      onServiceSelect={(serviceId, duration) => setBookingData(prev => ({ ...prev, serviceId, duration, date: "", time: "" }))}
                       duration={bookingData.duration}
                       providerId={provider.id}
                       providerData={provider}
@@ -489,61 +365,22 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
                   </form>
                 </Card>
               ) : (
-                <Card ref={confirmationSectionRef} className="p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-                    Confirm Booking
-                  </h2>
-                  <div className="space-y-6 mb-8">
-                    <div className="bg-golden/10 p-4 rounded-xl">
-                      <h3 className="font-semibold text-golden mb-3">Appointment Details:</h3>
-                      <div className="space-y-2 text-gray-800">
-                        <p><span className="font-medium">Date:</span> {bookingData.date}</p>
-                        <p><span className="font-medium">Time:</span> {bookingData.time}</p>
-                        <p><span className="font-medium">{clientLabel}:</span> <span className="text-golden font-semibold">{
-                          services.find(s => s.id === bookingData.serviceId)?.['name'] || 'Unknown Service'
-                        }</span></p>
-                        <p><span className="font-medium">Duration:</span> {bookingData.duration} min</p>
-                        {bookingData.notes && (
-                          <p><span className="font-medium">Notes:</span> {bookingData.notes}</p>
-                        )}
-                      </div>
-                    </div>
-                    <Card className="p-4 bg-gradient-to-r from-gray-50 to-golden/5 border-0">
-                      <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
-                        Notes (Optional)
-                      </label>
-                      <Textarea
-                        value={bookingData.notes}
-                        onChange={(e) => setBookingData(prev => ({ ...prev, notes: e.target.value }))}
-                        placeholder="Add any notes or special requests..."
-                        rows={3}
-                        className="text-left border-0 bg-white/80 focus:ring-2 focus:ring-golden rounded-xl"
-                      />
-                    </Card>
-                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                      <div className="flex items-center space-x-2 ">
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                        <p className="text-amber-800 font-medium">
-                          After confirmation, your appointment will be booked. You can manage it from your My Bookings list.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex space-x-4 ">
-                    <Button
-                      onClick={() => setShowConfirmation(false)}
-                      variant="outline"
-                      className="flex-1 py-3"
-                    >
-                      Edit Details
-                    </Button>
-                    <Button
-                      onClick={handleFinalConfirmation}
-                      disabled={submitting}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3"
-                    >
-                      {submitting ? 'Confirming...' : 'Confirm Booking'}
-                    </Button>
+                <Card ref={confirmationSectionRef} className="booking-review" dir="ltr">
+                  <div className="confirmation-eyebrow">FINAL STEP</div>
+                  <h2>Review your appointment</h2>
+                  <p className="booking-review-intro">Check the details, add a note if you need to, and confirm your booking.</p>
+                  <dl>
+                    <div className="review-wide"><dt>Date</dt><dd>{appointmentDate(bookingData.date)}</dd></div>
+                    <div><dt>Time</dt><dd>{appointmentTime(bookingData.time)}</dd></div>
+                    <div><dt>Duration</dt><dd>{bookingData.duration} minutes</dd></div>
+                    <div className="review-wide"><dt>Service</dt><dd>{services.find(s => s.id === bookingData.serviceId)?.name}</dd></div>
+                  </dl>
+                  <label htmlFor="appointment-notes">Message to your provider <span>Optional</span></label>
+                  <Textarea id="appointment-notes" value={bookingData.notes} onChange={e => setBookingData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Is there anything you would like your provider to know?" rows={3} maxLength={2000} />
+                  <p className="booking-review-note">Your appointment is booked when you confirm. You can then save your appointment as an image.</p>
+                  <div className="booking-review-actions">
+                    <button type="button" className="confirmation-secondary" disabled={submitting} onClick={() => setShowConfirmation(false)}>Edit appointment</button>
+                    <button type="button" className="confirmation-primary" onClick={handleFinalConfirmation} disabled={submitting}>{submitting ? 'Confirming…' : 'Confirm booking'}</button>
                   </div>
                 </Card>
               )}
