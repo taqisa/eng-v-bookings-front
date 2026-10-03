@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Star, MapPin, Phone, ArrowRight, AlertCircle, MessageCircle } from "lucide-react";
+import { Star, MapPin, Phone, ArrowRight, MessageCircle, Award, ArrowUpLeft } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import GoogleCalendarAuth from "@/components/GoogleCalendarAuth";
@@ -12,11 +12,15 @@ import { useAuth } from "@/components/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import EnhancedModernCalendar from "@/components/EnhancedModernCalendar";
-import BookingHeader from "@/components/BookingHeader";
 import { Database } from "@/integrations/supabase/types";
 import { API_BASE_URL } from "@/lib/utils";
+import { appointmentDate, appointmentTime } from '@/lib/appointmentCard';
+import { saveBookingDraft, readBookingDraft, clearBookingDraft } from '@/lib/bookingDraft';
+import { clockParts } from '@/lib/timeSlots';
+import '@/components/Confirmation.css';
+import '@/components/BookingTheme.css';
 
-const language = "en";
+const language = "ar";
 
 
 // Manually define types missing from the generated Database type
@@ -42,7 +46,7 @@ interface Provider extends BaseProvider {
 }
 
 const convertArabicToWestern = (s: string) => {
-  const arabicNumerals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
   const westernNumerals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
   return s.split('').map(char => westernNumerals[arabicNumerals.indexOf(char)] || char).join('');
 };
@@ -60,9 +64,9 @@ const convertTo24Hour = (time12h: string): string => {
     return "00:00:00";
   }
   if (hours === '12') {
-    hours = modifier === 'PM' ? '12' : '00';
+    hours = modifier === 'م' ? '12' : '00';
   } else {
-    if (modifier === 'PM') {
+    if (modifier === 'م') {
       hours = String(parseInt(hours, 10) + 12);
     }
   }
@@ -70,26 +74,12 @@ const convertTo24Hour = (time12h: string): string => {
   return `${hours.padStart(2, '0')}:${minutes}:00`;
 };
 
-// Fix experience strings that have the number at the end, e.g. "years of experience in Family Medicine 8"
-const formatExperience = (exp: string): string => {
-  const match = exp.match(/^(.+?)\s+(\d+)$/);
-  if (match) {
-    return `${match[2]} ${match[1]}`;
-  }
-  return exp;
-};
-
-interface BookingPageProps {
-  providerIdProp?: string;
-}
-
-const BookingPage = ({ providerIdProp }: BookingPageProps) => {
-  const { providerId: routeProviderId } = useParams<{ providerId: string }>();
-  const providerId = providerIdProp || routeProviderId;
+const BookingPage = () => {
+  const { providerId } = useParams<{ providerId: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [clientLabel, setClientLabel] = useState<string>('Client');
+  const [clientLabel, setClientLabel] = useState<string>(language === 'ar' ? 'عميل' : 'Client');
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingData, setBookingData] = useState({
@@ -115,7 +105,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   const fetchProvider = useCallback(async () => {
     if (!providerId) {
       console.error('🔴 [FETCH] No providerId provided');
-      toast.error('Provider ID not found');
+      toast.error('معرف مقدم الخدمة غير موجود');
       navigate('/');
       return;
     }
@@ -158,14 +148,14 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
 
       if (providerError || !providerData) {
         console.error('🔴 [FETCH] Error fetching provider:', providerError?.message, providerError?.details);
-        toast.error('Provider not found');
+        toast.error('لم يتم العثور على مقدم الخدمة');
         const params = new URLSearchParams(window.location.search);
         const redirectTo = params.get('redirectTo');
         navigate(redirectTo || '/');
         return;
       }
 
-      let clientLabelValue = 'Client';
+      let clientLabelValue = language === 'ar' ? 'عميل' : 'Client';
       if (providerData?.provider_type_id) {
         const { data: typeData, error: typeError } = await (supabase
           .from('provider_types' as any)
@@ -187,18 +177,18 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
       let sanitizedServices: ServiceRow[] = [];
       if (servicesError) {
         console.error('🔴 [FETCH] Error fetching services:', servicesError.message, servicesError.details);
-        toast.error('Failed to fetch services');
+        toast.error('فشل في جلب الخدمات');
       } else if (servicesData && servicesData.length > 0) {
         sanitizedServices = (servicesData as any[]).map(service => ({
           ...service,
           name: service.name && service.name.trim() !== '' ? service.name : 'Unnamed Service',
-          name_ar: service.name_ar && service.name_ar.trim() !== '' ? service.name_ar : (service.name && service.name.trim() !== '' ? service.name : 'Unnamed Service'),
+          name_ar: service.name_ar && service.name_ar.trim() !== '' ? service.name_ar : (service.name && service.name.trim() !== '' ? service.name : 'خدمة غير مسماة'),
           duration_minutes: service.duration_minutes || 30
         }));
         console.log('🔴 [FETCH] Services fetched:', sanitizedServices);
       } else {
         console.warn('🔴 [FETCH] No services found for provider:', providerId);
-        toast.warning('No services available for this provider');
+        toast.warning('لا توجد خدمات متاحة لهذا المزود');
       }
       setServices(sanitizedServices);
 
@@ -213,7 +203,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
       setProvider(providerData);
     } catch (error) {
       console.error('🔴 [FETCH] Exception:', error);
-      toast.error('Error loading data');
+      toast.error('حدث خطأ في تحميل البيانات');
       setServices([]);
       navigate('/');
     } finally {
@@ -222,29 +212,30 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   }, [providerId, navigate]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      console.log('🔴 [AUTH] No user, redirecting to auth page');
-      const currentPath = window.location.pathname + window.location.search;
-      navigate(`/auth?redirectTo=${encodeURIComponent(currentPath)}`);
-      return;
+    providerCache.current = null;
+    setLoading(true);
+    setProvider(null);
+    const draft = providerId && new URLSearchParams(window.location.search).get('resume') === '1'
+      ? readBookingDraft(providerId) : null;
+    setBookingData(draft || { date:'', time:'', notes:'', serviceId:null, duration:30 });
+    setShowConfirmation(!!draft);
+    if (providerId) {
+      void fetchProvider();
     }
-    if (user && providerId) {
-      fetchProvider();
-    }
-  }, [user, authLoading, providerId, navigate, fetchProvider]);
+  }, [providerId, fetchProvider]);
 
   const handlePreliminarySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!bookingData.serviceId) {
-      toast.error('Please select a service');
+      toast.error('يرجى اختيار الخدمة');
       return;
     }
     if (!bookingData.date) {
-      toast.error('Please select a date');
+      toast.error('يرجى اختيار التاريخ');
       return;
     }
     if (!bookingData.time) {
-      toast.error('Please select a time');
+      toast.error('يرجى اختيار الوقت');
       return;
     }
     console.log('🔴 [SUBMIT] Preliminary booking data:', bookingData);
@@ -252,9 +243,42 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   };
 
   const handleFinalConfirmation = async () => {
-    if (!user || !provider) return;
+    if (!provider || submitting) return;
+    if (!bookingData.serviceId || !bookingData.date || !bookingData.time) {
+      toast.error('يرجى اختيار الخدمة والتاريخ والوقت');
+      setShowConfirmation(false);
+      return;
+    }
+    if (!user) {
+      try {
+        saveBookingDraft(provider.id, bookingData);
+        const returnTo = `/booking/${encodeURIComponent(provider.id)}?resume=1`;
+        navigate(`/auth?redirectTo=${encodeURIComponent(returnTo)}`);
+      } catch {
+        toast.error('تعذّر حفظ اختياراتك. يرجى السماح بالتخزين في المتصفح ثم المحاولة مجدداً.');
+      }
+      return;
+    }
     setSubmitting(true);
     try {
+      // A slot may have been taken while the customer was signing in.
+      const service = services.find(s => s.id === bookingData.serviceId);
+      if (!service || (service.duration_minutes || 30) !== bookingData.duration) {
+        toast.error('تغيّرت الخدمة. يرجى اختيارها مجدداً.');
+        setShowConfirmation(false);
+        return;
+      }
+      const query = new URLSearchParams({date:bookingData.date,serviceId:service.id,duration:String(bookingData.duration)});
+      const availability = await fetch(`${API_BASE_URL}/providers/${encodeURIComponent(provider.id)}/available-slots?${query}`);
+      if (!availability.ok) throw new Error('Availability check failed');
+      const slots = await availability.json();
+      const selectedMinutes = clockParts(bookingData.time)?.minutes;
+      if (selectedMinutes === undefined || !slots.availableSlots?.some((slot: {start:string}) => clockParts(slot.start)?.minutes === selectedMinutes)) {
+        setBookingData(previous => ({...previous,time:''}));
+        setShowConfirmation(false);
+        toast.error('هذا الوقت لم يعد متاحاً. اختر وقتاً آخر لإكمال الحجز.');
+        return;
+      }
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('name, phone, email')
@@ -262,7 +286,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
         .single();
       if (userError) {
         console.error('🔴 [BOOKING] Error fetching user data:', userError);
-        toast.error('Error loading user data');
+        toast.error('حدث خطأ في تحميل بيانات المستخدم');
         return;
       }
       const timeIn24HourFormat = convertTo24Hour(bookingData.time);
@@ -278,7 +302,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
           {
             user_id: user.id,
             provider_id: provider.id,
-            provider_name: provider.display_name || provider.name,
+            provider_name: provider.display_name || provider.name_ar,
             date: bookingData.date,
             time: timeIn24HourFormat,
             notes: bookingData.notes,
@@ -292,10 +316,11 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
         .single();
       if (bookingError) {
         console.error('🔴 [BOOKING] Error creating booking:', bookingError);
-        toast.error('Error creating booking');
+        toast.error('حدث خطأ في إنشاء الحجز');
         return;
       }
       console.log('🔴 [BOOKING] Booking created:', booking);
+      clearBookingDraft(provider.id);
 
       // ALWAYS call the backend to trigger notifications (WhatsApp/SMS) and Calendar Sync
       try {
@@ -309,33 +334,33 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
           const data = await res.json();
           console.log('🔵 [BACKEND] Response:', data);
 
-          let successMessage = 'Booking confirmed successfully';
+          let successMessage = 'تم تأكيد الحجز بنجاح';
 
           if (data.whatsapp?.sent) {
-            successMessage += ' and WhatsApp message sent.';
+            successMessage += ' وتم إرسال رسالة واتساب.';
           }
 
           if (data.calendar_sync?.synced) {
             // Optional: Add calendar sync info if needed, or keep it simple as user requested focus on WhatsApp
-            // successMessage += ' and synced to calendar.';
+            // successMessage += ' وتمت المزامنة مع التقويم.';
           }
 
           toast.success(successMessage);
         } else {
           console.error('🔵 [BACKEND] Error:', await res.json());
           // Even if backend fails (e.g. email error), booking is saved in DB.
-          toast.success('Booking confirmed (notification error).');
+          toast.success('تم تأكيد الحجز (ولكن قد يكون هناك خطأ في الإشعارات).');
         }
       } catch (err) {
         console.error('🔵 [BACKEND] Network error:', err);
         // Fallback success message
-        toast.success('Booking confirmed! (Server connection failed for notifications)');
+        toast.success('تم تأكيد الحجز بنجاح! (فشل الاتصال بالخادم للإشعارات)');
       }
 
       navigate(`/booking-confirmation/${provider.id}?bookingId=${booking.id}`);
     } catch (error) {
       console.error('🔴 [BOOKING] Error confirming booking:', error);
-      toast.error('Error confirming booking');
+      toast.error('حدث خطأ في تأكيد الحجز');
     } finally {
       setSubmitting(false);
     }
@@ -343,7 +368,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-golden/5 to-golden/10">
+      <div className="booking-page min-h-screen">
         <Header />
         <div className="pt-20 flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-golden"></div>
@@ -355,10 +380,10 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
 
   if (!provider) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-golden/5 to-golden/10">
+      <div className="booking-page min-h-screen">
         <Header />
         <div className="pt-20 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Provider not found</h1>
+          <h1 className="text-2xl font-bold text-gray-900">مقدم الخدمة غير موجود</h1>
         </div>
         <Footer />
       </div>
@@ -366,7 +391,7 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="booking-page min-h-screen">
       <Header />
       <main className="pt-20 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -376,70 +401,53 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
               className="flex items-center text-gray-600 hover:text-golden transition-all duration-300 hover:scale-105"
             >
               <ArrowRight className="w-5 h-5 ml-2" />
-              Back
+              رجوع
             </button>
           </div>
-          <div className="grid lg:grid-cols-2 gap-8">
-            <Card className="p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
+          <div className="booking-panels grid lg:grid-cols-2 gap-8">
+            <Card className="provider-panel p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
               <div className="text-center mb-6">
                 <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden bg-gradient-to-br from-golden/20 to-golden/30 p-1">
                   <img
-                    src={provider.image_filename || `https://majskvkyvflifttonwgr.supabase.co/storage/v1/object/public/pic/${provider.id}.jpg`}
-                    alt={provider.display_name || provider.name}
+                    src={provider.image_filename || `https://majskvkyvflifttonwgr.supabase.co/storage/v1/object/public/pic/${provider.id}.jpg` || 'https://via.placeholder.com/128/4F46E5/FFFFFF?text=' + encodeURIComponent(provider.name_ar?.charAt(0) || 'د')}
+                    alt={provider.display_name || provider.name_ar}
                     className="w-full h-full object-cover rounded-full"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(provider.name?.charAt(0) || 'P')}&background=D4AF37&color=fff&size=128`;
+                      target.src = 'https://via.placeholder.com/128/4F46E5/FFFFFF?text=' + encodeURIComponent(provider.name_ar?.charAt(0) || 'د');
                     }}
                   />
                 </div>
                 {provider.display_name && (
                   <h1 className="text-xl font-medium text-gray-600 mb-2">{provider.display_name}</h1>
                 )}
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{provider.name}</h1>
-                <p className="text-golden font-medium mb-4 text-lg">{provider.specialty}</p>
-                <div className="flex items-center justify-center mb-6">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-5 h-5 ${i < Math.floor(provider.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                      />
-                    ))}
-                  </div>
-                  <span className="mr-3 text-gray-600">
-                    {provider.rating || 0} ({provider.review_count || 0} reviews)
-                  </span>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{provider.name_ar}</h1>
+                <p className="text-golden font-medium mb-4 text-lg">{provider.specialty_ar}</p>
+                <div className="provider-rating" dir="rtl" aria-label={`${provider.rating || 0} من 5، ${provider.review_count || 0} تقييم`}>
+                  <Star size={22} strokeWidth={1.5} aria-hidden="true" />
+                  <strong><bdi>{provider.rating || 0}</bdi></strong>
+                  <span>من 5</span>
+                  <span className="provider-rating-count">{provider.review_count || 0} تقييم</span>
                 </div>
               </div>
-              <div className="space-y-3 text-gray-600 mb-6">
+              <div className="provider-facts" dir="rtl">
                 {provider.experience && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="flex-shrink-0 w-8 h-8 bg-golden/10 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-golden rounded-full"></div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 leading-snug">{formatExperience(provider.experience)}</span>
+                  <div className="provider-fact">
+                    <Award className="provider-fact-icon" aria-hidden="true" />
+                    <div><span className="provider-fact-label">الخبرة</span><p>{provider.experience}</p></div>
                   </div>
                 )}
                 {provider.location && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(provider.location)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors group"
-                  >
-                    <div className="flex-shrink-0 w-8 h-8 bg-golden/10 rounded-full flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                      <MapPin className="w-4 h-4 text-golden group-hover:text-blue-600 transition-colors" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors leading-snug">{provider.location}</span>
-                  </a>
+                  <div className="provider-fact">
+                    <MapPin className="provider-fact-icon" aria-hidden="true" />
+                    <div><span className="provider-fact-label">العنوان</span><p>{provider.location}</p></div>
+                  </div>
                 )}
                 {provider.phone && (
-                  <a href={`tel:${provider.phone}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
-                    <div className="flex-shrink-0 w-8 h-8 bg-golden/10 rounded-full flex items-center justify-center group-hover:bg-golden/20 transition-colors">
-                      <Phone className="w-4 h-4 text-golden" />
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800">{provider.phone}</span>
+                  <a href={`tel:${provider.phone}`} className="provider-fact provider-contact">
+                    <Phone className="provider-fact-icon" aria-hidden="true" />
+                    <div><span className="provider-fact-label">اتصل بمقدم الخدمة</span><p><bdi>{provider.phone}</bdi></p></div>
+                    <ArrowUpLeft className="provider-contact-arrow" aria-hidden="true" />
                   </a>
                 )}
                 {provider.whatsapp && (
@@ -447,16 +455,15 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
                     href={`https://wa.me/${provider.whatsapp.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-green-50 rounded-xl hover:bg-green-100 transition-colors group"
+                    className="provider-fact provider-contact"
                   >
-                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                      <MessageCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium text-green-700">Contact via WhatsApp</span>
+                    <MessageCircle className="provider-fact-icon" aria-hidden="true" />
+                    <div><span className="provider-fact-label">رسالة مباشرة</span><p>تواصل عبر واتساب</p></div>
+                    <ArrowUpLeft className="provider-contact-arrow" aria-hidden="true" />
                   </a>
                 )}
               </div>
-              {!provider.google_calendar_connected && (
+              {user && !provider.google_calendar_connected && (
                 <GoogleCalendarAuth
                   providerId={provider.id}
                   isConnected={provider.google_calendar_connected}
@@ -464,12 +471,23 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
                 />
               )}
             </Card>
-            <div className="space-y-7">
+            <div className="booking-panel-column">
               {!showConfirmation ? (
                 <Card ref={confirmationSectionRef} className="p-0 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-xl">
-                  <BookingHeader 
-                      isDateTimeSelected={!!bookingData.date && !!bookingData.time} 
-                    />
+                  <div className="booking-heading relative flex justify-center items-center py-12 px-6">
+                    <div className="absolute inset-0 flex justify-center items-center">
+                      <div className="w-80 h-80 bg-gradient-to-r from-golden/80 via-golden to-golden/70 rounded-full filter blur-3xl opacity-30 animate-pulse-slow"></div>
+                    </div>
+                    <h2 className="text-5xl md:text-8xl font-extrabold text-center relative z-10 tracking-wide">
+                      <span className="bg-clip-text text-transparent bg-gradient-to-r from-golden via-gray-800 to-golden animate-gradient-move">
+                        احجز موعدك
+                      </span>
+                      <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 w-56 h-1.5 bg-gradient-to-r from-transparent via-golden to-transparent rounded-full animate-glow-pulse"></div>
+                    </h2>
+                    <div className="absolute -top-6 -right-6 w-5 h-5 bg-golden/80 rounded-full animate-float opacity-80 shadow-lg shadow-golden/50"></div>
+                    <div className="absolute -bottom-6 -left-6 w-4 h-4 bg-golden rounded-full animate-float-delay opacity-80 shadow-lg shadow-golden/50" style={{ animationDelay: '0.7s' }}></div>
+                    <div className="absolute top-1/2 -left-10 w-3 h-3 bg-golden/70 rounded-full animate-float-delay opacity-80 shadow-lg shadow-golden/50" style={{ animationDelay: '1.4s' }}></div>
+                  </div>
                   <form onSubmit={handlePreliminarySubmit} className="space-y-6">
                     <EnhancedModernCalendar
                       selectedDate={bookingData.date}
@@ -489,61 +507,22 @@ const BookingPage = ({ providerIdProp }: BookingPageProps) => {
                   </form>
                 </Card>
               ) : (
-                <Card ref={confirmationSectionRef} className="p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-                    Confirm Booking
-                  </h2>
-                  <div className="space-y-6 mb-8">
-                    <div className="bg-golden/10 p-4 rounded-xl">
-                      <h3 className="font-semibold text-golden mb-3">Appointment Details:</h3>
-                      <div className="space-y-2 text-gray-800">
-                        <p><span className="font-medium">Date:</span> {bookingData.date}</p>
-                        <p><span className="font-medium">Time:</span> {bookingData.time}</p>
-                        <p><span className="font-medium">{clientLabel}:</span> <span className="text-golden font-semibold">{
-                          services.find(s => s.id === bookingData.serviceId)?.['name'] || 'Unknown Service'
-                        }</span></p>
-                        <p><span className="font-medium">Duration:</span> {bookingData.duration} min</p>
-                        {bookingData.notes && (
-                          <p><span className="font-medium">Notes:</span> {bookingData.notes}</p>
-                        )}
-                      </div>
-                    </div>
-                    <Card className="p-4 bg-gradient-to-r from-gray-50 to-golden/5 border-0">
-                      <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
-                        Notes (Optional)
-                      </label>
-                      <Textarea
-                        value={bookingData.notes}
-                        onChange={(e) => setBookingData(prev => ({ ...prev, notes: e.target.value }))}
-                        placeholder="Add any notes or special requests..."
-                        rows={3}
-                        className="text-left border-0 bg-white/80 focus:ring-2 focus:ring-golden rounded-xl"
-                      />
-                    </Card>
-                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                      <div className="flex items-center space-x-2 ">
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                        <p className="text-amber-800 font-medium">
-                          After confirmation, your appointment will be booked. You can manage it from your My Bookings list.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex space-x-4 ">
-                    <Button
-                      onClick={() => setShowConfirmation(false)}
-                      variant="outline"
-                      className="flex-1 py-3"
-                    >
-                      Edit Details
-                    </Button>
-                    <Button
-                      onClick={handleFinalConfirmation}
-                      disabled={submitting}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3"
-                    >
-                      {submitting ? 'Confirming...' : 'Confirm Booking'}
-                    </Button>
+                <Card ref={confirmationSectionRef} className="booking-review" dir="rtl">
+                  <div className="confirmation-eyebrow">الخطوة الأخيرة</div>
+                  <h2>راجع موعدك وأكّد الحجز</h2>
+                  <p className="booking-review-intro">كل شيء جاهز. تأكّد من التفاصيل قبل تثبيت موعدك.</p>
+                  <dl>
+                    <div className="review-wide"><dt>التاريخ</dt><dd>{appointmentDate(bookingData.date)}</dd></div>
+                    <div><dt>الساعة</dt><dd><bdi>{appointmentTime(bookingData.time)}</bdi></dd></div>
+                    <div><dt>المدة</dt><dd>{bookingData.duration} دقيقة</dd></div>
+                    <div className="review-wide"><dt>الخدمة</dt><dd>{services.find(s => s.id === bookingData.serviceId)?.name_ar || services.find(s => s.id === bookingData.serviceId)?.name || 'الموعد المحدد'}</dd></div>
+                  </dl>
+                  <label htmlFor="appointment-notes">رسالة لمقدم الخدمة <span>اختياري</span></label>
+                  <Textarea id="appointment-notes" value={bookingData.notes} onChange={(e) => setBookingData(prev => ({ ...prev, notes:e.target.value }))} placeholder="هل هناك شيء تود إخبار مقدم الخدمة به؟" rows={3} maxLength={2000} />
+                  <p className="booking-review-note">سيُحجز الموعد عند الضغط على التأكيد. يمكنك إدارته لاحقاً من «حجوزاتي».</p>
+                  <div className="booking-review-actions">
+                    <button type="button" className="confirmation-secondary" disabled={submitting} onClick={() => setShowConfirmation(false)}>تعديل الموعد</button>
+                    <button type="button" className="confirmation-primary" onClick={handleFinalConfirmation} disabled={submitting}>{submitting ? 'جارٍ تأكيد الموعد…' : 'تأكيد الحجز'}</button>
                   </div>
                 </Card>
               )}
