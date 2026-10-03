@@ -53,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // // Load initial session
     const loadInitialSession = async () => {
       if (sessionCache.current) {
-        console.log('🔵 [AUTH] Using cached session:', sessionCache.current);
         setSession(sessionCache.current);
         setUser(sessionCache.current?.user ?? null);
         setLoading(false);
@@ -64,7 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await retryWithBackoff(() =>
           supabase.auth.getSession()
         );
-        console.log('🔵 [AUTH] Initial session:', session);
         sessionCache.current = session;
         setSession(session);
         setUser(session?.user ?? null);
@@ -80,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔵 [AUTH] Auth state changed:', event, session);
         sessionCache.current = session;
         setSession(session);
         setUser(session?.user ?? null);
@@ -92,7 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (name: string, email: string, phone: string, password: string) => {
     try {
-      console.log('🔴 [AUTH] Attempting signup with:', { name, email, phone });
 
       // Check if phone already exists
       try {
@@ -131,7 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
 
-      console.log('🔴 [AUTH] Signup successful:', data);
 
       if (data.user) {
         const { error: insertError } = await supabase
@@ -159,7 +154,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (emailOrPhone: string, password: string) => {
     try {
-      console.log('🔴 [AUTH] Attempting signin with:', emailOrPhone);
 
       let email = emailOrPhone;
 

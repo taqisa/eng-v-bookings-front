@@ -1,3 +1,4 @@
+import { safeBookingRedirect } from '@/lib/bookingNavigation';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +7,7 @@ import { useAuth } from '@/components/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import Header from '@/components/Header';
+import { BookingSiteHeader as Header } from '@/components/BookingSiteChrome';
 import { PhoneNumberInput } from '@/components/PhoneNumberInput';
 
 // Custom SVG icons
@@ -156,7 +157,7 @@ const AuthPage = () => {
         redirectTo = '/account';
       }
       console.log('🔴 [AUTH PAGE] useEffect - navigating to:', redirectTo);
-      navigate(redirectTo);
+      navigate(safeBookingRedirect(redirectTo));
     }
   }, [user, navigate]);
 
@@ -227,7 +228,7 @@ const AuthPage = () => {
             redirectTo = '/account';
           }
           console.log('🔴 [AUTH PAGE] signIn success - navigating to:', redirectTo);
-          navigate(redirectTo);
+          navigate(safeBookingRedirect(redirectTo));
         }
       } else {
         if (!formData.name || !formData.email || !formData.phone || !formData.password) {
@@ -308,7 +309,7 @@ const AuthPage = () => {
           if (!redirectTo || redirectTo === '/') {
             redirectTo = '/account';
           }
-          navigate(redirectTo);
+          navigate(safeBookingRedirect(redirectTo));
         }
       }
     } catch (error) {
