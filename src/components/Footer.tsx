@@ -16,7 +16,7 @@ const Footer = () => {
       links: [
         { name: "Help Center", href: "#", type: "external" },
         { name: "Contact Us", href: "#", type: "external" },
-        { name: "FAQ", href: "/#faq", type: "internal" }
+        { name: "Find a provider", href: "/", type: "internal" }
       ]
     }
   };
@@ -76,7 +76,7 @@ const Footer = () => {
                 </div>
                 <div>
                   <h3 className="text-3xl font-extrabold text-white tracking-tight font-sans transition-colors duration-300">
-
+                    BOOKINGS
                   </h3>
                 </div>
               </Link>
@@ -135,7 +135,7 @@ const Footer = () => {
         <div className="py-8 border-t border-slate-800/50 bg-[#020617]">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-slate-500 text-sm dir-ltr font-medium">
-              © {new Date().getFullYear()} <span className="text-slate-300 font-bold">HAJZK</span>. All rights reserved.
+              © {new Date().getFullYear()} <span className="text-slate-300 font-bold">BOOKINGS</span>. All rights reserved.
             </div>
 
             <div className="flex items-center space-x-2 text-slate-600 text-sm">
