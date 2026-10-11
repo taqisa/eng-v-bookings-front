@@ -102,8 +102,14 @@ const StarField = memo(() => {
 const CancelBookingDialog = ({ booking, onConfirm }: { booking: Booking; onConfirm: () => void }) => (
   <Dialog>
     <DialogTrigger asChild>
-      <button className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Cancel booking">
-        <X className="w-4 h-4" />
+      <button
+        type="button"
+        aria-label={`Cancel booking with ${booking.provider_name}`}
+        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
+        title="Cancel booking"
+      >
+        <X className="w-4 h-4" aria-hidden="true" />
+        <span>Cancel booking</span>
       </button>
     </DialogTrigger>
     <DialogContent className="bg-white/5 backdrop-blur-3xl border border-white/10 text-white rounded-3xl p-8">

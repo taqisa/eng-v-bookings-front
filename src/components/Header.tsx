@@ -79,6 +79,7 @@ const Header = () => {
   const navigate = useNavigate();
 
   const navItems = [
+    { name: "Home", href: "/" },
     { name: "My Bookings", href: "/account" },
   ];
 
@@ -194,7 +195,7 @@ const Header = () => {
 
               {/* Logo Text */}
                 <h1 className="text-2xl h-9 font-black text-gray-800 tracking-tight" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  Booking
+                  BOOKINGS
                 </h1>
               </div>
             {/* --- END OF NEW LOGO --- */}
