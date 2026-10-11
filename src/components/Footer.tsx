@@ -16,7 +16,7 @@ const Footer = () => {
       links: [
         { name: "Help Center", href: "#", type: "external" },
         { name: "Contact Us", href: "#", type: "external" },
-        { name: "FAQ", href: "/#faq", type: "internal" }
+        { name: "Find a provider", href: "/", type: "internal" }
       ]
     }
   };
