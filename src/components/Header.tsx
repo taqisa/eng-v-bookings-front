@@ -79,7 +79,6 @@ const Header = () => {
   const navigate = useNavigate();
 
   const navItems = [
-    { name: "Providers", href: "/" },
     { name: "My Bookings", href: "/account" },
   ];
 
