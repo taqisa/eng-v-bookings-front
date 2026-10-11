@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import BookingPage from "./pages/BookingPage";
@@ -15,7 +15,6 @@ import AccountPage from "./pages/AccountPage";
 import AboutPage from "./pages/AboutPage";
 import TenantRouter from "./pages/TenantRouter";
 import { useEffect } from "react";
-import ProviderDashboard from "./pages/ProviderDashboard";
 
 import { API_BASE_URL } from "@/lib/utils";
 
@@ -48,7 +47,7 @@ const App = () => {
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <ScrollToTop />
             <Routes>
-              <Route path="/" element={<ProviderDashboard />} />
+              <Route path="/" element={<Navigate to="/account" replace />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/book/:slug" element={<TenantRouter />} />
               <Route path="/booking/:providerId" element={<BookingPage />} />

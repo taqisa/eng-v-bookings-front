@@ -7,7 +7,7 @@ import { useAuth } from '@/components/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookingSiteFooter, BookingSiteHeader as Header } from '@/components/BookingSiteChrome';
+import { BookingSiteHeader as Header } from '@/components/BookingSiteChrome';
 import { PhoneNumberInput } from '@/components/PhoneNumberInput';
 
 // Custom SVG icons
@@ -561,7 +561,6 @@ const AuthPage = () => {
         </Card>
         </motion.div>
       </main>
-      <BookingSiteFooter />
     </div>
   );
 };
