@@ -15,7 +15,7 @@ import AccountPage from "./pages/AccountPage";
 import AboutPage from "./pages/AboutPage";
 import TenantRouter from "./pages/TenantRouter";
 import { useEffect } from "react";
-import BookingWelcome from "./pages/BookingWelcome";
+import ProviderDashboard from "./pages/ProviderDashboard";
 
 import { API_BASE_URL } from "@/lib/utils";
 
@@ -48,8 +48,7 @@ const App = () => {
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <ScrollToTop />
             <Routes>
-              {/* Customers enter through their provider’s direct booking link. */}
-              <Route path="/" element={<BookingWelcome />} />
+              <Route path="/" element={<ProviderDashboard />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/book/:slug" element={<TenantRouter />} />
               <Route path="/booking/:providerId" element={<BookingPage />} />
