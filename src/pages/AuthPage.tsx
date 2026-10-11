@@ -7,7 +7,7 @@ import { useAuth } from '@/components/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookingSiteHeader as Header } from '@/components/BookingSiteChrome';
+import { BookingSiteFooter, BookingSiteHeader as Header } from '@/components/BookingSiteChrome';
 import { PhoneNumberInput } from '@/components/PhoneNumberInput';
 
 // Custom SVG icons
@@ -336,7 +336,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-bl from-black to-gray-800 flex items-center justify-center px-4 font-inter relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-bl from-black to-gray-800 flex flex-col font-inter relative overflow-hidden">
       {/* Add stars and meteors */}
       <StarField />
 
@@ -364,12 +364,13 @@ const AuthPage = () => {
       </motion.div>
 
       <Header />
-      <motion.div
+      <main className="relative z-10 flex flex-1 w-full items-center justify-center px-4 py-12">
+        <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 50 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.8, ease: 'easeOut', type: 'spring', stiffness: 100 }}
-        className="pt-24 w-full max-w-md z-10"
-      >
+        className="w-full max-w-md"
+        >
         <Card className="bg-white/5 backdrop-blur-2xl shadow-2xl rounded-3xl p-10 border border-white/10 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50" />
           <div className="relative text-center mb-10">
@@ -558,7 +559,9 @@ const AuthPage = () => {
             </button>
           </motion.div>
         </Card>
-      </motion.div>
+        </motion.div>
+      </main>
+      <BookingSiteFooter />
     </div>
   );
 };
